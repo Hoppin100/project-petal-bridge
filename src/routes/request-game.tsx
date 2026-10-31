@@ -1,9 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { useCallback } from 'react';
 import { GameRequestPage } from '@/views/GameRequestPage';
 import { useOpenAuth } from '@/lib/auth-modal';
 function RequestGame() {
   const openAuth = useOpenAuth();
-  return <GameRequestPage onRequireAuth={() => openAuth('signin')} />;
+  const requireAuth = useCallback(() => openAuth('signin'), [openAuth]);
+  return <GameRequestPage onRequireAuth={requireAuth} />;
 }
 
 export const Route = createFileRoute('/request-game')({

@@ -1,9 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { useCallback } from 'react';
 import { SubmitRunPage } from '@/views/SubmitRunPage';
 import { useOpenAuth } from '@/lib/auth-modal';
 function Submit() {
   const openAuth = useOpenAuth();
-  return <SubmitRunPage onRequireAuth={() => openAuth('signin')} />;
+  const requireAuth = useCallback(() => openAuth('signin'), [openAuth]);
+  return <SubmitRunPage onRequireAuth={requireAuth} />;
 }
 
 export const Route = createFileRoute('/submit')({
