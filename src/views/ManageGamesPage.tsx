@@ -18,7 +18,7 @@ import type { Game, Category, GameRequest } from '@/lib/types';
 import { linkHref } from '@/lib/router';
 
 export function ManageGamesPage() {
-  const { session, profile } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [games, setGames] = useState<Game[]>([]);
   const [categoryMap, setCategoryMap] = useState<Record<string, Category[]>>({});
   const [loading, setLoading] = useState(true);
@@ -72,6 +72,17 @@ export function ManageGamesPage() {
     void loadGames();
     void loadRequests();
   }, [session, profile, loadGames, loadRequests]);
+
+  // While the stored session and profile are still being read, show neither
+  // the tools nor the "owners only" message — an owner reloading this page
+  // would otherwise see an access-denied screen flash first.
+  if (authLoading) {
+    return (
+      <div className="sr-container py-20 text-center">
+        <p className="text-emerald-700">Loading…</p>
+      </div>
+    );
+  }
 
   if (!session) {
     return (
