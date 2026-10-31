@@ -1,3 +1,4 @@
+import { runVerification } from '@/lib/verify-run.functions';
 import { useEffect, useState, useCallback } from 'react';
 import {
   ShieldCheck,
@@ -272,16 +273,7 @@ export function DashboardPage() {
   async function handleRegenerate(runId: string) {
     setActionLoading(true);
     try {
-      const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-run`;
-      const resp = await fetch(fnUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ runId }),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      await runVerification({ data: { runId } });
       await loadData();
     } catch (e) {
       console.error('regenerate failed', e);

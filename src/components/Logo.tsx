@@ -1,3 +1,4 @@
+import logoAsset from '@/assets/splitrush-logo.png.asset.json';
 import { linkHref } from '@/lib/router';
 
 interface LogoProps {
@@ -18,7 +19,7 @@ export function Logo({ size = 'md', onClick }: LogoProps) {
       aria-label="SplitRush home"
       className="group flex items-center gap-2.5 font-bold tracking-tight"
     >
-      <img src="/splitrush-logo.png" alt="" aria-hidden="true" className={`${imageSize} flex-shrink-0 object-contain`} />
+      <img src={logoAsset.url} alt="" aria-hidden="true" className={`${imageSize} flex-shrink-0 object-contain`} />
       <span className={`${text} text-emerald-50`}>
         SPLIT<span className="text-[var(--sr-primary)]">RUSH</span>
       </span>

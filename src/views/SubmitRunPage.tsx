@@ -1,3 +1,4 @@
+import { runVerification } from '@/lib/verify-run.functions';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Loader2, Send, Youtube, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -134,15 +135,7 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
       // The function may fail or be unavailable; the run stays pending for
       // manual review either way.
       try {
-        const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-run`;
-        await fetch(fnUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ runId }),
-        });
+        await runVerification({ data: { runId } });
       } catch (aiErr) {
         console.warn('AI assessment unavailable, run remains pending', aiErr);
       }
