@@ -163,6 +163,17 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
     }
   }
 
+  // While the stored session is still being read, show neither the form nor
+  // the "sign in" message — a signed-in person reloading this page would
+  // otherwise see the sign-in prompt flash first.
+  if (loading) {
+    return (
+      <div className="sr-container py-20 text-center">
+        <p className="text-emerald-700">Loading…</p>
+      </div>
+    );
+  }
+
   if (!session) {
     return (
       <div className="sr-container py-20 text-center">
