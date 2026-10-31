@@ -139,6 +139,11 @@
   input, select, textarea { font-size: 16px; }
 }
 
+@keyframes slot-reel {
+  from { transform: translateY(-45%); opacity: .35; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 @utility sr-container { margin-inline: auto; width: 100%; max-width: 80rem; padding-inline: 1rem;
   @media (width >= 40rem) { padding-inline: 1.5rem; }
   @media (width >= 64rem) { padding-inline: 2rem; } }
