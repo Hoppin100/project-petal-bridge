@@ -12,7 +12,7 @@ interface SubmitRunPageProps {
 }
 
 export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
-  const { session, profile } = useAuth();
+  const { session, profile, loading } = useAuth();
 
   const [games, setGames] = useState<Game[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -32,9 +32,12 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Only ask people to sign in once the stored session has actually been
+  // read: on a hard page load the session is still null for a moment, and
+  // opening the dialog then would block someone who is already signed in.
   useEffect(() => {
-    if (!session) onRequireAuth();
-  }, [session, onRequireAuth]);
+    if (!loading && !session) onRequireAuth();
+  }, [loading, session, onRequireAuth]);
 
   useEffect(() => {
     (async () => {
