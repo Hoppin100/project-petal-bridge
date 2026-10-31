@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServerFn } from '@tanstack/react-start';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 
@@ -61,7 +62,8 @@ export const runVerification = createServerFn({ method: 'POST' })
   })
   .handler(async ({ data }) => {
     const runId = data.runId;
-    const { supabaseAdmin: admin } = await import('@/integrations/supabase/client.server');
+    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+    const admin = supabaseAdmin as unknown as SupabaseClient;
     // Fetch the run
     const { data: run, error: runErr } = await admin
       .from('runs')
@@ -72,10 +74,7 @@ export const runVerification = createServerFn({ method: 'POST' })
       .maybeSingle<RunRow>();
 
     if (runErr || !run) {
-      return new Response(
-        JSON.stringify({ error: 'Run not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error('Run not found');
     }
 
     // Fetch game + category for context
