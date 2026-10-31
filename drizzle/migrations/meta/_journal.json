@@ -8,6 +8,13 @@
       "when": 1793406338423,
       "tag": "0000_splitrush_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793410217044,
+      "tag": "0001_tighten_read_policies",
+      "breakpoints": true
     }
   ]
 }
