@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
 export function GameRequestPage({ onRequireAuth }: { onRequireAuth: () => void }) {
-  const { session, profile } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [gameName, setGameName] = useState('');
   const [gameUrl, setGameUrl] = useState('');
   const [busy, setBusy] = useState(false);
@@ -55,7 +55,11 @@ export function GameRequestPage({ onRequireAuth }: { onRequireAuth: () => void }
         </p>
       </div>
 
-      {!session ? (
+      {authLoading ? (
+        <div className="mt-6">
+          <p className="text-sm text-emerald-700">Loading…</p>
+        </div>
+      ) : !session ? (
         <div className="mt-6 flex flex-col items-start gap-3 border-b border-[var(--sr-border)] pb-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-[var(--sr-text-dim)]">Sign in to submit a game request.</p>
           <button className="sr-btn-primary" onClick={onRequireAuth}>Sign in</button>

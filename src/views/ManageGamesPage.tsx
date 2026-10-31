@@ -18,7 +18,7 @@ import type { Game, Category, GameRequest } from '@/lib/types';
 import { linkHref } from '@/lib/router';
 
 export function ManageGamesPage() {
-  const { session, profile } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [games, setGames] = useState<Game[]>([]);
   const [categoryMap, setCategoryMap] = useState<Record<string, Category[]>>({});
   const [loading, setLoading] = useState(true);
@@ -34,6 +34,21 @@ export function ManageGamesPage() {
     const { games: gameList, error: loadError } = await fetchGames();
     if (loadError) setError(`Could not load games: ${loadError}`);
     setGames(gameList);
+    // Read every game's categories in one pass so each row can show its
+    // category count straight away instead of only after being expanded.
+    if (gameList.length) {
+      const { data } = await supabase
+        .from('categories')
+        .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at')
+        .in('game_id', gameList.map((game) => game.id))
+        .order('sort_order')
+        .order('name');
+      const grouped: Record<string, Category[]> = {};
+      for (const category of (data as Category[]) ?? []) {
+        (grouped[category.game_id] ??= []).push(category);
+      }
+      setCategoryMap((prev) => ({ ...grouped, ...prev }));
+    }
     setLoading(false);
   }, []);
 
@@ -72,6 +87,17 @@ export function ManageGamesPage() {
     void loadGames();
     void loadRequests();
   }, [session, profile, loadGames, loadRequests]);
+
+  // While the stored session and profile are still being read, show neither
+  // the tools nor the "owners only" message — an owner reloading this page
+  // would otherwise see an access-denied screen flash first.
+  if (authLoading) {
+    return (
+      <div className="sr-container py-20 text-center">
+        <p className="text-emerald-700">Loading…</p>
+      </div>
+    );
+  }
 
   if (!session) {
     return (
