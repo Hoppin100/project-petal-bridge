@@ -256,7 +256,7 @@ export function DashboardPage() {
           category_id: run.category_id,
           label,
           notes: feedbackNote.trim() || null,
-          marked_by: profile?.id,
+          marked_by: profile?.id ?? "",
         });
         if (error) throw error;
         setFeedbackNote('');
@@ -456,10 +456,10 @@ function RunListItem({
   onClick,
 }: {
   run: Run;
-  game?: Game;
-  category?: Category;
-  runner?: Profile;
-  assessment?: AiAssessment;
+  game?: Game | undefined;
+  category?: Category | undefined;
+  runner?: Profile | undefined;
+  assessment?: AiAssessment | undefined;
   selected: boolean;
   onClick: () => void;
 }) {
@@ -531,11 +531,11 @@ function RunDetailPanel({
   onToggleRef,
 }: {
   run: Run;
-  game?: Game;
-  category?: Category;
-  runner?: Profile;
-  assessment?: AiAssessment;
-  refExample?: ReferenceExample;
+  game?: Game | undefined;
+  category?: Category | undefined;
+  runner?: Profile | undefined;
+  assessment?: AiAssessment | undefined;
+  refExample?: ReferenceExample | undefined;
   history: AssessmentHistoryEntry[];
   actionLoading: boolean;
   rejectReason: string;

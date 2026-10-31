@@ -367,7 +367,7 @@ function parseVideoTimestamp(value: string): number | null {
   if (parts.length < 2 || parts.length > 3 || parts.some((part) => !/^\d+$/.test(part))) return null;
   const nums = parts.map(Number);
   if (nums.slice(1).some((part) => part > 59)) return null;
-  return nums.length === 2 ? nums[0] * 60 + nums[1] : nums[0] * 3600 + nums[1] * 60 + nums[2];
+  return nums.length === 2 ? nums[0]! * 60 + nums[1]! : nums[0]! * 3600 + nums[1]! * 60 + nums[2]!;
 }
 
 function TimeField({

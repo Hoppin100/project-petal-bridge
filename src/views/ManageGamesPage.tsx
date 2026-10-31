@@ -109,7 +109,7 @@ export function ManageGamesPage() {
     const { error: updateError } = await supabase.from('game_requests').update({
       status,
       reviewed_at: new Date().toISOString(),
-      reviewed_by: profile?.id,
+      reviewed_by: profile?.id ?? null,
     }).eq('id', request.id);
     if (updateError) {
       console.error('review game request failed', updateError);
@@ -136,7 +136,7 @@ export function ManageGamesPage() {
     const categories = [...(categoryMap[gameId] ?? [])];
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= categories.length) return;
-    [categories[index], categories[targetIndex]] = [categories[targetIndex], categories[index]];
+    [categories[index], categories[targetIndex]] = [categories[targetIndex]!, categories[index]!];
     setError(null);
     setReorderingGameId(gameId);
     try {

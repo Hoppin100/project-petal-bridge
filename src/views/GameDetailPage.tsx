@@ -48,7 +48,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
         .order('name');
       const catList = (cats as Category[]) ?? [];
       setCategories(catList);
-      if (catList.length > 0) setActiveCat(catList[0].id);
+      if (catList.length > 0) setActiveCat(catList[0]!.id);
 
       setLoading(false);
     })();

@@ -164,7 +164,7 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
           return;
         }
         sessionEstablished = true;
-        await ensureProfile(userId, data.user?.user_metadata?.username);
+        await ensureProfile(userId, data.user?.user_metadata?.['username']);
         await refreshProfile(userId);
         onClose();
       } else {
@@ -177,7 +177,7 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
         sessionEstablished = true;
         await ensureProfile(
           data.user.id,
-          data.user.user_metadata?.username
+          data.user.user_metadata?.['username']
         );
         await refreshProfile(data.user.id);
         onClose();
