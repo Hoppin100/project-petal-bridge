@@ -56,7 +56,7 @@ interface OEmbedData {
 
 export const runVerification = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { runId: string }) => {
+  .validator((input: { runId: string }) => {
     if (!input || typeof input.runId !== 'string' || !/^[0-9a-f-]{36}$/i.test(input.runId)) throw new Error('runId required');
     return input;
   })

@@ -48,7 +48,7 @@ export function GameRequestPage({ onRequireAuth }: { onRequireAuth: () => void }
   return (
     <div className="sr-container max-w-3xl py-8 sm:py-12">
       <div className="border-b border-[var(--sr-border)] pb-5">
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Community</p>
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Requests</p>
         <h1 className="text-2xl font-bold sm:text-3xl">Request a game</h1>
         <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--sr-text-muted)]">
           Tell us what you want to race. Include a public page for the game so the team can review it.

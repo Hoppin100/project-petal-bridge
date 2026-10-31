@@ -1,5 +1,4 @@
 import { Logo } from '@/components/Logo';
-import { MessageCircle } from 'lucide-react';
 import { linkHref } from '@/lib/router';
 
 export function Footer() {
@@ -8,19 +7,10 @@ export function Footer() {
       <div className="sr-container flex flex-col items-start justify-between gap-4 py-5 sm:flex-row sm:items-center">
         <div className="flex items-center gap-4">
           <Logo size="sm" />
-          <span className="hidden text-xs text-[var(--sr-text-muted)] sm:inline">Community run leaderboards</span>
+          <span className="hidden text-xs text-[var(--sr-text-muted)] sm:inline">Speedrun leaderboards</span>
         </div>
         <nav aria-label="Footer navigation" className="flex gap-5 text-xs text-[var(--sr-text-muted)]">
           <a href={linkHref('/')} className="hover:text-white">Home</a>
-          <a
-            href="https://discord.gg/SmpnpKhKAJ"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded-sm bg-[#5865F2] px-2 py-1 text-white hover:bg-[#4752C4]"
-          >
-            <MessageCircle aria-hidden="true" className="h-3 w-3" />
-            Discord
-          </a>
           <a href={linkHref('/games')} className="hover:text-white">Games</a>
           <a href={linkHref('/submit')} className="hover:text-white">Submit a run</a>
         </nav>
