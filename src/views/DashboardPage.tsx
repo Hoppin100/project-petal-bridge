@@ -33,7 +33,7 @@ import { formatTime, timeAgo, parseYouTubeId, youtubeEmbedUrl } from '@/lib/form
 import { linkHref } from '@/lib/router';
 
 export function DashboardPage() {
-  const { profile, session } = useAuth();
+  const { profile, session, loading: authLoading } = useAuth();
   const [pendingRuns, setPendingRuns] = useState<Run[]>([]);
   const [recentRuns, setRecentRuns] = useState<Run[]>([]);
   const [gameMap, setGameMap] = useState<Record<string, Game>>({});
@@ -281,6 +281,17 @@ export function DashboardPage() {
     } finally {
       setActionLoading(false);
     }
+  }
+
+  // While the stored session and profile are still being read, show neither
+  // the review tools nor the "owners only" message — an owner reloading this
+  // page would otherwise see an access-denied screen flash first.
+  if (authLoading) {
+    return (
+      <div className="sr-container py-20 text-center">
+        <p className="text-emerald-700">Loading…</p>
+      </div>
+    );
   }
 
   if (!session) {
