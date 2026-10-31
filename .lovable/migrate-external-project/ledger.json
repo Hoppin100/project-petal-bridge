@@ -1,11 +1,65 @@
 [
- {"capability":"code","source":"React+Vite hash-router SPA","outcome":"migrate","status":"in_progress","next_action":"Port pages/components to TanStack routes"},
- {"capability":"schema","source":"supabase/migrations 0001-0010","outcome":"migrate","status":"in_progress","next_action":"Apply consolidated migration"},
- {"capability":"records","source":"none attached","outcome":"migrate","status":"pending","next_action":"Request table CSV exports"},
- {"capability":"auth identities","source":"Supabase Auth email/password","outcome":"migrate","status":"pending","next_action":"Request user export (ids, emails)"},
- {"capability":"authorization","source":"profiles.role owner/member + RLS + definer RPCs","outcome":"migrate","status":"in_progress","next_action":"Owner bootstrap by verified email trigger (hardcoded passwords dropped)"},
- {"capability":"verify-run edge function","source":"supabase/functions/verify-run","outcome":"migrate to server function","status":"in_progress","next_action":"createServerFn with admin client"},
- {"capability":"storage","source":"none","outcome":"n/a","status":"verified","next_action":""},
- {"capability":"secrets","source":"VITE_SUPABASE_*, SERVICE_ROLE","outcome":"replaced by Cloud","status":"verified","next_action":""},
- {"capability":"verification","source":"","outcome":"","status":"pending","next_action":"Build + browser check"}
+ {
+  "capability": "code",
+  "source": "React+Vite hash-router SPA",
+  "outcome": "migrate",
+  "status": "implemented",
+  "next_action": "Exercise signed-in submit + owner review once accounts exist"
+ },
+ {
+  "capability": "schema",
+  "source": "supabase/migrations 0001-0010",
+  "outcome": "migrate",
+  "status": "implemented",
+  "next_action": "Exercise signed-in submit + owner review once accounts exist"
+ },
+ {
+  "capability": "records",
+  "source": "none attached",
+  "outcome": "migrate",
+  "status": "pending",
+  "next_action": "Request table CSV exports"
+ },
+ {
+  "capability": "auth identities",
+  "source": "Supabase Auth email/password",
+  "outcome": "migrate",
+  "status": "pending",
+  "next_action": "Request user export (ids, emails)"
+ },
+ {
+  "capability": "authorization",
+  "source": "profiles.role owner/member + RLS + definer RPCs",
+  "outcome": "migrate",
+  "status": "implemented",
+  "next_action": "Owner bootstrap by verified email trigger (hardcoded passwords dropped)"
+ },
+ {
+  "capability": "verify-run edge function",
+  "source": "supabase/functions/verify-run",
+  "outcome": "migrate to server function",
+  "status": "implemented",
+  "next_action": "Exercise signed-in submit + owner review once accounts exist"
+ },
+ {
+  "capability": "storage",
+  "source": "none",
+  "outcome": "n/a",
+  "status": "verified",
+  "next_action": ""
+ },
+ {
+  "capability": "secrets",
+  "source": "VITE_SUPABASE_*, SERVICE_ROLE",
+  "outcome": "replaced by Cloud",
+  "status": "verified",
+  "next_action": ""
+ },
+ {
+  "capability": "verification",
+  "source": "",
+  "outcome": "",
+  "status": "partial",
+  "next_action": "Public pages + sign-in modal verified; signed-in flows pending accounts"
+ }
 ]
