@@ -30,7 +30,7 @@ export function parseYouTubeId(url: string): string | null {
   ];
   for (const re of patterns) {
     const m = trimmed.match(re);
-    if (m) return m[1];
+    if (m?.[1]) return m[1];
   }
   // bare 11-char id
   if (/^[A-Za-z0-9_-]{11}$/.test(trimmed)) return trimmed;
