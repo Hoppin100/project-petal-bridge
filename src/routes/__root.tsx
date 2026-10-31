@@ -8,7 +8,13 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { AuthProvider } from "@/lib/auth";
+import { AuthModalContext } from "@/lib/auth-modal";
+import { registerNavigator } from "@/lib/router";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
+import { AuthModal } from "@/components/AuthModal";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -78,21 +84,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "SplitRush — Speedrun Leaderboards" },
+      { name: "description", content: "Track speedrun times, compare runs, and climb the SplitRush leaderboards." },
+      { name: "theme-color", content: "#07110f" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -103,7 +112,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
       </head>
@@ -120,8 +129,45 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+function AppShell() {
+  const router = useRouter();
+  const [authMode, setAuthMode] = useState<"signin" | "signup" | null>(null);
+  const openAuth = useCallback((mode: "signin" | "signup") => setAuthMode(mode), []);
+
+  useEffect(() => {
+    registerNavigator((to) => router.history.push(to));
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as HTMLElement | null)?.closest?.("a");
+      if (!a || a.target === "_blank" || a.hasAttribute("download")) return;
+      const href = a.getAttribute("href");
+      if (!href || !href.startsWith("/") || href.startsWith("//")) return;
+      e.preventDefault();
+      router.history.push(href);
+      window.scrollTo({ top: 0 });
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [router]);
+
+  return (
+    <AuthModalContext.Provider value={openAuth}>
+      <div className="flex min-h-screen flex-col">
+        <Navbar onOpenAuth={openAuth} />
+        {/* Required: nested routes render here. */}
+        <main className="flex-1">
+          <Outlet />
+        </main>
+        <Footer />
+        {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitch={setAuthMode} />}
+      </div>
+    </AuthModalContext.Provider>
   );
 }

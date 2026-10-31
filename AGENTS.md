@@ -8,3 +8,7 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- SplitRush pages live in `src/views/` and are mounted by thin TanStack route files; links are plain `<a href="/...">` intercepted in `__root.tsx` so legacy markup routes client-side.
+- Owner permissions come from `public.user_roles` (`is_owner()`); `profiles.role` is a trigger-maintained, client-read-only mirror for display.
+- Run assessment runs in the `runVerification` server function (`src/lib/verify-run.functions.ts`), not an edge function.
