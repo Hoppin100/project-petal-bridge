@@ -79,7 +79,7 @@ export function HomePage() {
     <div className="sr-container pb-12">
       <section className="grid gap-6 border-b border-[var(--sr-border)] py-7 md:grid-cols-[1fr_minmax(250px,360px)] md:items-end">
         <div>
-          <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.16em] text-[var(--sr-primary)]"><span className="h-2 w-2 rounded-full bg-[var(--sr-primary)]" />Community leaderboards</p>
+          <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.16em] text-[var(--sr-primary)]"><span className="h-2 w-2 rounded-full bg-[var(--sr-primary)]" />Speedrun leaderboards</p>
           <h1 className="text-3xl font-bold sm:text-4xl">The next split starts here.</h1>
           <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--sr-text-dim)]">Browse game records, follow the runners setting them, and put your own time on the board.</p>
         </div>
@@ -89,7 +89,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {loadError && <p role="status" className="mt-4 border-l-2 border-amber-500 px-3 py-2 text-sm text-amber-200">Some community data could not be loaded. Try refreshing the page.</p>}
+      {loadError && <p role="status" className="mt-4 border-l-2 border-amber-500 px-3 py-2 text-sm text-amber-200">Some data could not be loaded. Try refreshing the page.</p>}
 
       <div className="grid gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-10">
