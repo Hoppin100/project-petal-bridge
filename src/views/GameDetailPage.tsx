@@ -38,10 +38,17 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
       );
       if (cancelled) return;
       if (visibilityError) {
-        console.error('Could not check game visibility', visibilityError);
-        setLoadError(visibilityError.message);
-        setLoading(false);
-        return;
+        const visibilityMigrationMissing =
+          (visibilityError.code === 'PGRST202' || visibilityError.code === '42883') &&
+          /is_game_under_construction/i.test(visibilityError.message);
+        if (visibilityMigrationMissing) {
+          console.warn('Game visibility migration is not applied; loading the public game page without hidden-game support.');
+        } else {
+          console.error('Could not check game visibility', visibilityError);
+          setLoadError(visibilityError.message);
+          setLoading(false);
+          return;
+        }
       }
       const isStaff = profile?.role === 'owner' || profile?.role === 'moderator';
       if (isUnderConstruction && !isStaff) {
