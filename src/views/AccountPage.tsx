@@ -217,6 +217,11 @@ export function AccountPage() {
           reference examples, and review AI assessments from the dashboard.
         </div>
       )}
+      {profile?.role === 'moderator' && (
+        <div className="mt-8 rounded-lg border border-[var(--sr-primary)]/30 bg-[var(--sr-primary)]/10 p-4 text-sm text-emerald-200">
+          You have moderator privileges and can preview game pages hidden from the public.
+        </div>
+      )}
     </div>
   );
 }

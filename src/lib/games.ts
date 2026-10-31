@@ -2,9 +2,9 @@ import { supabase } from '@/lib/supabase';
 import type { Game } from '@/lib/types';
 
 const GAME_COLUMNS =
-  'id, slug, title, cover_url, blurb, page_url, source, is_featured, created_at';
+  'id, slug, title, cover_url, blurb, page_url, source, is_featured, is_hidden, created_at';
 const BASE_GAME_COLUMNS =
-  'id, slug, title, cover_url, blurb, is_featured, created_at';
+  'id, slug, title, cover_url, blurb, is_featured, is_hidden, created_at';
 
 type GameQueryResult = { games: Game[]; error: string | null };
 

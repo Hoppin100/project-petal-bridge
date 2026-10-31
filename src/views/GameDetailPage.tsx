@@ -6,12 +6,14 @@ import type { Game, Category, Run, Profile } from '@/lib/types';
 import { Leaderboard } from '@/components/Leaderboard';
 import { linkHref } from '@/lib/router';
 import { formatTime } from '@/lib/format';
+import { useAuth } from '@/lib/auth';
 
 interface GameDetailPageProps {
   slug: string;
 }
 
 export function GameDetailPage({ slug }: GameDetailPageProps) {
+  const { profile, loading: authLoading } = useAuth();
   const [game, setGame] = useState<Game | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
@@ -19,14 +21,36 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [underConstruction, setUnderConstruction] = useState(false);
   const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
+    if (authLoading) return;
+    let cancelled = false;
     (async () => {
       setLoading(true);
       setNotFound(false);
+      setUnderConstruction(false);
       setLoadError('');
+      const { data: isUnderConstruction, error: visibilityError } = await supabase.rpc(
+        'is_game_under_construction',
+        { p_slug: slug }
+      );
+      if (cancelled) return;
+      if (visibilityError) {
+        console.error('Could not check game visibility', visibilityError);
+        setLoadError(visibilityError.message);
+        setLoading(false);
+        return;
+      }
+      const isStaff = profile?.role === 'owner' || profile?.role === 'moderator';
+      if (isUnderConstruction && !isStaff) {
+        setUnderConstruction(true);
+        setLoading(false);
+        return;
+      }
       const { game: g, error } = await fetchGameBySlug(slug);
+      if (cancelled) return;
       if (error) {
         console.error('Could not load game', error);
         setLoadError(error);
@@ -46,13 +70,22 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
         .eq('game_id', g.id)
         .order('sort_order')
         .order('name');
+      if (cancelled) return;
       const catList = (cats as Category[]) ?? [];
       setCategories(catList);
       if (catList.length > 0) setActiveCat(catList[0]!.id);
 
       setLoading(false);
-    })();
-  }, [slug]);
+    })().catch((error: unknown) => {
+      if (cancelled) return;
+      console.error('Could not load game page', error);
+      setLoadError('The game library could not be reached. Check the Supabase connection and try again.');
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, authLoading, profile?.role]);
 
   useEffect(() => {
     if (!activeCat) return;
@@ -86,10 +119,28 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
     })();
   }, [activeCat]);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="sr-container py-20 text-center">
         <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[var(--sr-primary)] border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (underConstruction) {
+    return (
+      <div className="sr-container py-20 text-center">
+        <Gamepad2 className="mx-auto h-12 w-12 text-emerald-800" />
+        <h1 className="mt-4 text-2xl font-bold text-emerald-50">
+          This page is under construction
+        </h1>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-[var(--sr-text-muted)]">
+          This game page is not available to the public yet.
+        </p>
+        <a href={linkHref('/games')} className="sr-btn-ghost mt-6">
+          <ArrowLeft className="h-4 w-4" />
+          Back to games
+        </a>
       </div>
     );
   }
@@ -231,4 +282,3 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
     </div>
   );
 }
-

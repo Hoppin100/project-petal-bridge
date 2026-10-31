@@ -22,3 +22,6 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+Before deploying, apply database migrations `0003_add_moderator_role` and
+`0004_hide_games` to enable moderator access and game visibility controls.

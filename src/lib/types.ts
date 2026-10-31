@@ -1,4 +1,4 @@
-export type Role = 'member' | 'owner';
+export type Role = 'member' | 'moderator' | 'owner';
 
 export interface Profile {
   id: string;
@@ -18,6 +18,7 @@ export interface Game {
   page_url: string | null;
   source: string | null;
   is_featured: boolean;
+  is_hidden: boolean;
   created_at: string;
 }
 

@@ -247,6 +247,7 @@ export type Database = {
           created_at: string
           id: string
           is_featured: boolean
+          is_hidden: boolean
           page_url: string | null
           slug: string
           source: string | null
@@ -258,6 +259,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_featured?: boolean
+          is_hidden?: boolean
           page_url?: string | null
           slug: string
           source?: string | null
@@ -269,6 +271,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_featured?: boolean
+          is_hidden?: boolean
           page_url?: string | null
           slug?: string
           source?: string | null
@@ -502,6 +505,10 @@ export type Database = {
         Returns: boolean
       }
       is_owner: { Args: never; Returns: boolean }
+      is_game_under_construction: {
+        Args: { p_slug: string }
+        Returns: boolean
+      }
       record_assessment: {
         Args: {
           p_confidence: number
@@ -660,7 +667,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "member"],
+      app_role: ["owner", "member", "moderator"],
     },
   },
 } as const

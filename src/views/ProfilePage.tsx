@@ -119,6 +119,11 @@ export function ProfilePage({ username }: ProfilePageProps) {
                 Owner
               </span>
             )}
+            {p.role === 'moderator' && (
+              <span className="sr-badge bg-[var(--sr-surface-2)] text-[var(--sr-primary)]">
+                Moderator
+              </span>
+            )}
           </div>
           {p.bio && (
             <p className="mt-1 text-sm text-emerald-100/70">{p.bio}</p>

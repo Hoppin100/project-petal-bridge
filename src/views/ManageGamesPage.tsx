@@ -306,6 +306,11 @@ export function ManageGamesPage() {
                           Featured
                         </span>
                       )}
+                      {game.is_hidden && (
+                        <span className="sr-badge bg-amber-500/15 text-amber-300">
+                          Hidden from public
+                        </span>
+                      )}
                       {game.source && (
                         <span className="sr-badge bg-[var(--sr-surface-2)] text-[var(--sr-text-dim)]">
                           {game.source}
@@ -511,6 +516,7 @@ function GameModal({
   const [pageUrl, setPageUrl] = useState(game?.page_url ?? '');
   const [source, setSource] = useState(game?.source ?? '');
   const [featured, setFeatured] = useState(game?.is_featured ?? false);
+  const [hidden, setHidden] = useState(game?.is_hidden ?? false);
   const [coverPreviewError, setCoverPreviewError] = useState(false);
   const [categoryNames, setCategoryNames] = useState('');
   const [slugTouched, setSlugTouched] = useState(!!game);
@@ -553,6 +559,7 @@ function GameModal({
         page_url: pageUrl.trim() || null,
         source: source.trim() || null,
         is_featured: featured,
+        is_hidden: hidden,
       };
       let savedGameId = game?.id;
       if (game) {
@@ -601,9 +608,9 @@ function GameModal({
         err?.code === 'PGRST204' ||
         /column .* does not exist|Could not find the/i.test(detail)
       ) {
-        setError(
-          'The database is missing a column this form sends (page_url or source). Run migrations 0006 and 0008 against your Supabase project, then try again.'
-        );
+        setError(/is_hidden/i.test(detail)
+          ? 'The database is missing game visibility support. Apply migrations 0003 and 0004, then try again.'
+          : 'The database is missing a game details column. Apply the latest database migrations, then try again.');
       } else if (err?.code === '42501') {
         setError(
           'Only owner accounts can add or edit games. Sign in with an owner account and try again.'
@@ -799,6 +806,20 @@ function GameModal({
             <span>
               <span className="block font-medium">Feature on the homepage</span>
               <span className="text-xs text-[var(--sr-text-muted)]">Highlight this game in the featured games section.</span>
+            </span>
+          </label>
+          <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-emerald-100">
+            <input
+              type="checkbox"
+              checked={hidden}
+              onChange={(e) => setHidden(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-[var(--sr-border)] accent-[var(--sr-primary)]"
+            />
+            <span>
+              <span className="block font-medium">Hide game from public</span>
+              <span className="text-xs text-[var(--sr-text-muted)]">
+                Only moderators and owners can view its page until it is ready.
+              </span>
             </span>
           </label>
           </section>
