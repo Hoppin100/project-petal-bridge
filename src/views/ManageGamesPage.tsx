@@ -867,6 +867,7 @@ function CategoryModal({
 }) {
   const [name, setName] = useState(category?.name ?? '');
   const [timingRules, setTimingRules] = useState(category?.timing_rules ?? '');
+  const [sharedCategoryIds, setSharedCategoryIds] = useState<string[]>([]);
   const [parentCategoryId, setParentCategoryId] = useState(initialParentCategoryId ?? '');
   const [sortOrder, setSortOrder] = useState(
     category?.sort_order ?? (Math.max(0, ...existingCategories.map((item) => item.sort_order)) + 10)
@@ -903,6 +904,7 @@ function CategoryModal({
         sort_order: sortOrder,
         parent_category_id: parentCategoryId || null,
       };
+      let savedCategoryId = category?.id;
       if (category) {
         const { error: updErr } = await supabase
           .from('categories')
@@ -910,13 +912,29 @@ function CategoryModal({
           .eq('id', category.id);
         if (updErr) throw updErr;
       } else {
-        const { error: insErr } = await supabase.from('categories').insert(payload);
+        const { data: insertedCategory, error: insErr } = await supabase
+          .from('categories')
+          .insert(payload)
+          .select('id')
+          .single();
         if (insErr) throw insErr;
+        savedCategoryId = insertedCategory.id;
       }
+
+      const categoriesToUpdate = sharedCategoryIds.filter((id) => id !== savedCategoryId);
+      if (categoriesToUpdate.length > 0) {
+        const { error: sharedRulesError } = await supabase
+          .from('categories')
+          .update({ timing_rules: payload.timing_rules })
+          .in('id', categoriesToUpdate);
+        if (sharedRulesError) throw sharedRulesError;
+      }
+
       await onSaved(keepAdding);
       if (keepAdding) {
         setName('');
         setTimingRules('');
+        setSharedCategoryIds([]);
         setParentCategoryId('');
         setSortOrder(sortOrder + 10);
         setSavedNotice('Category added. You can add another or close this form.');
@@ -997,6 +1015,38 @@ function CategoryModal({
               Shown to runners and used by the verification assistant.
             </p>
           </div>
+
+          {existingCategories.filter((item) => item.id !== category?.id).length > 0 && (
+            <fieldset className="rounded-lg border border-[var(--sr-border)] p-3">
+              <legend className="px-1 text-sm font-medium text-emerald-100">
+                Use these timing rules for other categories
+              </legend>
+              <p className="mb-2 text-xs text-[var(--sr-text-muted)]">
+                Selected categories will be updated to use the timing rules above.
+              </p>
+              <div className="flex max-h-36 flex-col gap-2 overflow-y-auto">
+                {existingCategories
+                  .filter((item) => item.id !== category?.id)
+                  .map((item) => (
+                    <label key={item.id} className="flex items-center gap-2 text-sm text-emerald-100">
+                      <input
+                        type="checkbox"
+                        checked={sharedCategoryIds.includes(item.id)}
+                        onChange={(event) => {
+                          setSharedCategoryIds((current) =>
+                            event.target.checked
+                              ? [...current, item.id]
+                              : current.filter((id) => id !== item.id)
+                          );
+                        }}
+                        className="accent-[var(--sr-primary)]"
+                      />
+                      {item.name}
+                    </label>
+                  ))}
+              </div>
+            </fieldset>
+          )}
 
           <div>
             <label className="mb-1 block text-sm font-medium text-emerald-100" htmlFor="parent-category">
