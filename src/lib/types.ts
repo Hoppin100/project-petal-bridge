@@ -125,3 +125,14 @@ export interface AssessmentHistoryEntry {
   actor_id: string | null;
   created_at: string;
 }
+
+export type AdminUpdateType = 'feature' | 'improvement' | 'fix' | 'other';
+
+export interface AdminUpdate {
+  id: string;
+  title: string;
+  update_type: AdminUpdateType;
+  description: string;
+  created_by: string;
+  created_at: string;
+}

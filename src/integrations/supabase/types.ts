@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_updates: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          title: string
+          update_type: "feature" | "improvement" | "fix" | "other"
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          title: string
+          update_type: "feature" | "improvement" | "fix" | "other"
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          title?: string
+          update_type?: "feature" | "improvement" | "fix" | "other"
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_updates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_assessments: {
         Row: {
           confidence: number | null

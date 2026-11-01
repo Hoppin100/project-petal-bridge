@@ -36,6 +36,13 @@
       "when": 1793426401000,
       "tag": "0004_hide_games",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793494260000,
+      "tag": "0005_admin_updates",
+      "breakpoints": true
     }
   ]
 }
