@@ -23,6 +23,5 @@ npm i
 npm run dev
 ```
 
-Before deploying, apply database migrations `0003_add_moderator_role`,
-`0004_hide_games`, and `0005_admin_updates` to enable moderator access, game
-visibility controls, and the owner-only admin update log.
+Before deploying, apply database migrations `0003_add_moderator_role` and
+`0004_hide_games` to enable moderator access and game visibility controls.

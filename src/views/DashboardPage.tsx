@@ -31,7 +31,6 @@ import type {
 } from '@/lib/types';
 import { formatTime, timeAgo, parseYouTubeId, youtubeEmbedUrl } from '@/lib/format';
 import { linkHref } from '@/lib/router';
-import { AdminUpdatesPanel } from '@/components/AdminUpdatesPanel';
 
 export function DashboardPage() {
   const { profile, session, loading: authLoading } = useAuth();
@@ -329,8 +328,6 @@ export function DashboardPage() {
           Review submissions with the SplitRush Verification Assistant.
         </p>
       </div>
-
-      <AdminUpdatesPanel actorId={profile.id} />
 
       {/* Stats */}
       <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">

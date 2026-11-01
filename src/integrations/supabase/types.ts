@@ -21,7 +21,7 @@ export type Database = {
           description: string
           id: string
           title: string
-          update_type: "feature" | "improvement" | "fix" | "other"
+          update_type: string
         }
         Insert: {
           created_at?: string
@@ -29,7 +29,7 @@ export type Database = {
           description: string
           id?: string
           title: string
-          update_type: "feature" | "improvement" | "fix" | "other"
+          update_type: string
         }
         Update: {
           created_at?: string
@@ -37,7 +37,7 @@ export type Database = {
           description?: string
           id?: string
           title?: string
-          update_type?: "feature" | "improvement" | "fix" | "other"
+          update_type?: string
         }
         Relationships: [
           {
