@@ -15,6 +15,8 @@ import { registerNavigator } from "@/lib/router";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { AuthModal } from "@/components/AuthModal";
+import { LaunchCountdown, LAUNCH_AT } from "@/components/LaunchCountdown";
+import { useAuth } from "@/lib/auth";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -138,8 +140,21 @@ function RootComponent() {
 
 function AppShell() {
   const router = useRouter();
+  const { loading, profile } = useAuth();
   const [authMode, setAuthMode] = useState<"signin" | "signup" | null>(null);
+  const [now, setNow] = useState<number | null>(null);
   const openAuth = useCallback((mode: "signin" | "signup") => setAuthMode(mode), []);
+
+  useEffect(() => {
+    const updateNow = () => {
+      const currentTime = Date.now();
+      setNow(currentTime);
+      if (currentTime >= LAUNCH_AT) window.clearInterval(timer);
+    };
+    const timer = window.setInterval(updateNow, 1000);
+    updateNow();
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     registerNavigator((to) => router.history.push(to));
@@ -157,15 +172,33 @@ function AppShell() {
     return () => document.removeEventListener("click", onClick);
   }, [router]);
 
+  const siteReady = !loading && now !== null;
+  const launchLocked =
+    !siteReady ||
+    (now < LAUNCH_AT && profile?.role !== "owner");
+
   return (
     <AuthModalContext.Provider value={openAuth}>
       <div className="flex min-h-screen flex-col">
-        <Navbar onOpenAuth={openAuth} />
-        {/* Required: nested routes render here. */}
+        <Navbar onOpenAuth={openAuth} launchLocked={launchLocked} />
         <main className="flex-1">
-          <Outlet />
+          {siteReady ? (
+            launchLocked ? (
+              <LaunchCountdown
+                now={now}
+                username={profile?.username}
+                onOpenAuth={openAuth}
+              />
+            ) : (
+              <Outlet />
+            )
+          ) : (
+            <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center text-sm text-[var(--sr-text-muted)]">
+              Loading SplitRush…
+            </div>
+          )}
         </main>
-        <Footer />
+        {siteReady && !launchLocked && <Footer />}
         {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitch={setAuthMode} />}
       </div>
     </AuthModalContext.Provider>

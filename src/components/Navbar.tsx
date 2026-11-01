@@ -8,9 +8,10 @@ import { Avatar } from '@/components/Avatar';
 
 interface NavbarProps {
   onOpenAuth: (mode: 'signin' | 'signup') => void;
+  launchLocked?: boolean;
 }
 
-export function Navbar({ onOpenAuth }: NavbarProps) {
+export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
   const { profile, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -27,22 +28,26 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
           <Logo onClick={() => setMobileOpen(false)} />
         </div>
 
-        <nav aria-label="Main navigation" className="hidden items-center gap-5 border-l border-[var(--sr-border)] pl-5 md:flex">
-          {navLinks.map((l) => (
-            <a key={l.to} href={linkHref(l.to)} className="sr-nav-link">
-              {l.label}
-            </a>
-          ))}
-        </nav>
+        {!launchLocked && (
+          <nav aria-label="Main navigation" className="hidden items-center gap-5 border-l border-[var(--sr-border)] pl-5 md:flex">
+            {navLinks.map((l) => (
+              <a key={l.to} href={linkHref(l.to)} className="sr-nav-link">
+                {l.label}
+              </a>
+            ))}
+          </nav>
+        )}
 
-        <div className="ml-auto hidden max-w-sm flex-1 md:block">
-          <SearchBar />
-        </div>
+        {!launchLocked && (
+          <div className="ml-auto hidden max-w-sm flex-1 md:block">
+            <SearchBar />
+          </div>
+        )}
 
         <div className="ml-auto flex items-center gap-2 md:ml-2">
           {profile ? (
             <div className="hidden items-center gap-2 sm:flex">
-              {profile.role === 'owner' && (
+              {!launchLocked && profile.role === 'owner' && (
                 <a
                   href={linkHref('/manage')}
                   className="sr-btn-ghost"
@@ -52,10 +57,10 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
                   Manage
                 </a>
               )}
-              {profile.role === 'owner' && (
+              {!launchLocked && profile.role === 'owner' && (
                 <a href={linkHref('/members')} className="sr-btn-ghost" title="Manage members"><Users className="h-4 w-4" />Members</a>
               )}
-              {profile.role === 'owner' && (
+              {!launchLocked && profile.role === 'owner' && (
                 <a
                   href={linkHref('/dashboard')}
                   className="sr-btn-ghost"
@@ -65,15 +70,24 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
                   Dashboard
                 </a>
               )}
-              <a
-                href={linkHref(`/profile/${profile.username}`)}
-                className="sr-btn-ghost pl-2"
-                title="Your runner profile"
-              >
-                <Avatar name={profile.username} src={profile.avatar_url} className="h-7 w-7 text-xs" />
-                {profile.username}
-              </a>
-              <a href={linkHref('/account')} className="sr-btn-ghost">Account</a>
+              {!launchLocked && (
+                <>
+                  <a
+                    href={linkHref(`/profile/${profile.username}`)}
+                    className="sr-btn-ghost pl-2"
+                    title="Your runner profile"
+                  >
+                    <Avatar name={profile.username} src={profile.avatar_url} className="h-7 w-7 text-xs" />
+                    {profile.username}
+                  </a>
+                  <a href={linkHref('/account')} className="sr-btn-ghost">Account</a>
+                </>
+              )}
+              {launchLocked && (
+                <span className="hidden text-sm text-[var(--sr-text-dim)] lg:inline">
+                  {profile.username}
+                </span>
+              )}
               <button onClick={() => void signOut()} className="sr-btn-ghost" aria-label="Sign out" title="Sign out">
                 <LogOut className="h-4 w-4" />
               </button>
@@ -109,21 +123,25 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
       {mobileOpen && (
         <div className="border-t border-[var(--sr-border)] bg-[var(--sr-bg-2)] md:hidden">
           <div className="sr-container flex flex-col gap-3 border-t border-[var(--sr-border)] py-4">
-            <SearchBar onNavigate={() => setMobileOpen(false)} />
-            {navLinks.map((l) => (
-              <a
-                key={l.to}
-                href={linkHref(l.to)}
-                onClick={() => setMobileOpen(false)}
-                className="sr-nav-link py-2"
-              >
-                {l.label}
-              </a>
-            ))}
-            <div className="h-px bg-[var(--sr-border)]" />
+            {!launchLocked && (
+              <>
+                <SearchBar onNavigate={() => setMobileOpen(false)} />
+                {navLinks.map((l) => (
+                  <a
+                    key={l.to}
+                    href={linkHref(l.to)}
+                    onClick={() => setMobileOpen(false)}
+                    className="sr-nav-link py-2"
+                  >
+                    {l.label}
+                  </a>
+                ))}
+                <div className="h-px bg-[var(--sr-border)]" />
+              </>
+            )}
             {profile ? (
               <>
-                {profile.role === 'owner' && (
+                {!launchLocked && profile.role === 'owner' && (
                   <a
                     href={linkHref('/manage')}
                     onClick={() => setMobileOpen(false)}
@@ -132,10 +150,10 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
                     Manage Games
                   </a>
                 )}
-                {profile.role === 'owner' && (
+                {!launchLocked && profile.role === 'owner' && (
                   <a href={linkHref('/members')} onClick={() => setMobileOpen(false)} className="sr-nav-link">Members</a>
                 )}
-                {profile.role === 'owner' && (
+                {!launchLocked && profile.role === 'owner' && (
                   <a
                     href={linkHref('/dashboard')}
                     onClick={() => setMobileOpen(false)}
@@ -144,21 +162,25 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
                     Dashboard
                   </a>
                 )}
-                <a
-                  href={linkHref(`/profile/${profile.username}`)}
-                  onClick={() => setMobileOpen(false)}
-                  className="sr-nav-link flex items-center gap-2"
-                >
-                  <Avatar name={profile.username} src={profile.avatar_url} className="h-7 w-7 text-xs" />
-                  {profile.username}
-                </a>
-                <a
-                  href={linkHref('/account')}
-                  onClick={() => setMobileOpen(false)}
-                  className="sr-nav-link"
-                >
-                  Account settings
-                </a>
+                {!launchLocked && (
+                  <>
+                    <a
+                      href={linkHref(`/profile/${profile.username}`)}
+                      onClick={() => setMobileOpen(false)}
+                      className="sr-nav-link flex items-center gap-2"
+                    >
+                      <Avatar name={profile.username} src={profile.avatar_url} className="h-7 w-7 text-xs" />
+                      {profile.username}
+                    </a>
+                    <a
+                      href={linkHref('/account')}
+                      onClick={() => setMobileOpen(false)}
+                      className="sr-nav-link"
+                    >
+                      Account settings
+                    </a>
+                  </>
+                )}
                 <button
                   onClick={() => {
                     void signOut();
