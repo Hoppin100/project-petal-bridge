@@ -7,7 +7,7 @@ import { Avatar } from '@/components/Avatar';
 const USERNAME_RE = /^[A-Za-z0-9_]+$/;
 
 export function AccountPage() {
-  const { profile, session, refreshProfile } = useAuth();
+  const { profile, session, loading, refreshProfile } = useAuth();
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -39,16 +39,21 @@ export function AccountPage() {
       return;
     }
     setUsernameStatus('checking');
+    let current = true;
     const t = setTimeout(async () => {
-      const { data } = await supabase.rpc('check_username_available', {
+      const { data, error: checkError } = await supabase.rpc('check_username_available', {
         p_username: trimmed,
       });
+      if (!current) return;
+      if (checkError) { setUsernameStatus('idle'); return; }
       setUsernameStatus(
         data === 'invalid_format' ? 'invalid' : ((data as typeof usernameStatus) ?? 'idle')
       );
     }, 350);
-    return () => clearTimeout(t);
+    return () => { current = false; clearTimeout(t); };
   }, [username, profile]);
+
+  if (loading) return <div className="sr-container py-20 text-center text-emerald-700">Loading…</div>;
 
   if (!session) {
     return (

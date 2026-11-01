@@ -31,6 +31,7 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
   const [validationField, setValidationField] = useState<'game' | 'time' | 'video' | 'markers' | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   // Only ask people to sign in once the stored session has actually been
   // read: on a hard page load the session is still null for a moment, and
@@ -41,27 +42,32 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
 
   useEffect(() => {
     (async () => {
-      const { data: g } = await supabase
+      const { data: g, error: gameError } = await supabase
         .from('games')
         .select('id, slug, title, cover_url, blurb, is_featured, created_at')
         .order('title');
+      if (gameError) setLoadError('Games could not be loaded. Refresh and try again.');
       setGames((g as Game[]) ?? []);
     })();
   }, []);
 
   useEffect(() => {
     if (!gameId) return;
+    let current = true;
     (async () => {
-      const { data: c } = await supabase
+      const { data: c, error: categoryError } = await supabase
         .from('categories')
         .select('id, game_id, name, timing_rules, sort_order, created_at')
         .eq('game_id', gameId)
         .order('sort_order')
         .order('name');
+      if (!current) return;
+      if (categoryError) setLoadError('Categories could not be loaded. Choose the game again.');
       const catList = (c as Category[]) ?? [];
       setCategories(catList);
       setCategoryId(catList[0]?.id ?? '');
     })();
+    return () => { current = false; };
   }, [gameId]);
 
   const videoValid = isValidYouTubeUrl(videoUrl);
@@ -95,6 +101,11 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
     if (timeMs <= 0) {
       setValidationField('time');
       setError('Please enter a valid completion time.');
+      return;
+    }
+    if (timeMs > 100 * 3_600_000) {
+      setValidationField('time');
+      setError('Completion times must be under 100 hours.');
       return;
     }
     if (!isValidYouTubeUrl(videoUrl)) {
@@ -203,6 +214,7 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-5">
+        {loadError && <p role="alert" className="border-l-2 border-red-400 px-3 py-2 text-sm text-red-300">{loadError}</p>}
         <div className="grid grid-cols-1 gap-4 border-y border-[var(--sr-border)] py-5 sm:grid-cols-2">
           <div>
             <label htmlFor="run-game" className="mb-1 block text-sm font-medium text-emerald-100">

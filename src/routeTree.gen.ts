@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ManageRouteImport } from './routes/manage'
+import { Route as MembersRouteImport } from './routes/members'
 import { Route as RequestGameRouteImport } from './routes/request-game'
 import { Route as SubmitRouteImport } from './routes/submit'
 import { Route as GamesIndexRouteImport } from './routes/games/index'
@@ -37,6 +38,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const ManageRoute = ManageRouteImport.update({
   id: '/manage',
   path: '/manage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MembersRoute = MembersRouteImport.update({
+  id: '/members',
+  path: '/members',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RequestGameRoute = RequestGameRouteImport.update({
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/dashboard': typeof DashboardRoute
   '/manage': typeof ManageRoute
+  '/members': typeof MembersRoute
   '/request-game': typeof RequestGameRoute
   '/submit': typeof SubmitRoute
   '/games/$slug': typeof GamesSlugRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRoute
   '/dashboard': typeof DashboardRoute
   '/manage': typeof ManageRoute
+  '/members': typeof MembersRoute
   '/request-game': typeof RequestGameRoute
   '/submit': typeof SubmitRoute
   '/games/$slug': typeof GamesSlugRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/dashboard': typeof DashboardRoute
   '/manage': typeof ManageRoute
+  '/members': typeof MembersRoute
   '/request-game': typeof RequestGameRoute
   '/submit': typeof SubmitRoute
   '/games/$slug': typeof GamesSlugRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/dashboard'
     | '/manage'
+    | '/members'
     | '/request-game'
     | '/submit'
     | '/games/$slug'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/dashboard'
     | '/manage'
+    | '/members'
     | '/request-game'
     | '/submit'
     | '/games/$slug'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/dashboard'
     | '/manage'
+    | '/members'
     | '/request-game'
     | '/submit'
     | '/games/$slug'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   DashboardRoute: typeof DashboardRoute
   ManageRoute: typeof ManageRoute
+  MembersRoute: typeof MembersRoute
   RequestGameRoute: typeof RequestGameRoute
   SubmitRoute: typeof SubmitRoute
   GamesSlugRoute: typeof GamesSlugRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/manage'
       fullPath: '/manage'
       preLoaderRoute: typeof ManageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/members': {
+      id: '/members'
+      path: '/members'
+      fullPath: '/members'
+      preLoaderRoute: typeof MembersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/request-game': {
@@ -220,6 +240,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   DashboardRoute: DashboardRoute,
   ManageRoute: ManageRoute,
+  MembersRoute: MembersRoute,
   RequestGameRoute: RequestGameRoute,
   SubmitRoute: SubmitRoute,
   GamesSlugRoute: GamesSlugRoute,
