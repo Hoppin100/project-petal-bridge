@@ -17,16 +17,21 @@ export function ProfilePage({ username }: ProfilePageProps) {
   const [catMap, setCatMap] = useState<Record<string, Category>>({});
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
+    let current = true;
     (async () => {
       setLoading(true);
       setNotFound(false);
-      const { data: p } = await supabase
+      setLoadError(false);
+      const { data: p, error: profileError } = await supabase
         .from('profiles')
         .select('id, username, role, bio, avatar_url, created_at')
-        .ilike('username', username)
+        .ilike('username', username.replace(/[\\%_]/g, '\\$&'))
         .maybeSingle();
+      if (!current) return;
+      if (profileError) throw profileError;
       if (!p) {
         setNotFound(true);
         setLoading(false);
@@ -34,13 +39,15 @@ export function ProfilePage({ username }: ProfilePageProps) {
       }
       setProfile(p as Profile);
 
-      const { data: r } = await supabase
+      const { data: r, error: runsError } = await supabase
         .from('runs')
         .select(
           'id, game_id, category_id, runner_id, time_ms, platform, video_url, video_id, status, rejection_reason, verified_by, verified_at, notes, created_at'
         )
         .eq('runner_id', p.id)
         .order('created_at', { ascending: false });
+      if (runsError) throw runsError;
+      if (!current) return;
       const runList = (r as Run[]) ?? [];
       setRuns(runList);
 
@@ -65,7 +72,11 @@ export function ProfilePage({ username }: ProfilePageProps) {
         setCatMap(cm);
       }
       setLoading(false);
-    })();
+    })().catch((error) => {
+      console.error('profile load failed', error);
+      if (current) { setLoadError(true); setLoading(false); }
+    });
+    return () => { current = false; };
   }, [username]);
 
   if (loading) {
@@ -74,6 +85,10 @@ export function ProfilePage({ username }: ProfilePageProps) {
         <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[var(--sr-primary)] border-t-transparent" />
       </div>
     );
+  }
+
+  if (loadError) {
+    return <div className="sr-container py-20 text-center"><h1 className="text-2xl font-bold">Profile unavailable</h1><p className="mt-2 text-sm text-[var(--sr-text-muted)]">This runner could not be loaded right now.</p><button className="sr-btn-ghost mt-5" onClick={() => window.location.reload()}>Retry</button></div>;
   }
 
   if (notFound || !profile) {

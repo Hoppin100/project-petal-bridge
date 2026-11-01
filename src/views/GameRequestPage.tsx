@@ -29,16 +29,19 @@ export function GameRequestPage({ onRequireAuth }: { onRequireAuth: () => void }
 
     setBusy(true);
     setError('');
-    const { error: insertError } = await supabase.from('game_requests').insert({
-      requester_id: profile.id,
-      game_name: gameName.trim(),
-      game_url: normalizedUrl,
-    });
-    setBusy(false);
-    if (insertError) {
+    try {
+      const { error: insertError } = await supabase.from('game_requests').insert({
+        requester_id: profile.id,
+        game_name: gameName.trim(),
+        game_url: normalizedUrl,
+      });
+      if (insertError) throw insertError;
+    } catch (insertError) {
       console.error('game request failed', insertError);
       setError('Could not send your request. Please try again.');
       return;
+    } finally {
+      setBusy(false);
     }
     setSent(true);
     setGameName('');
@@ -82,7 +85,7 @@ export function GameRequestPage({ onRequireAuth }: { onRequireAuth: () => void }
               maxLength={100}
               autoComplete="off"
               value={gameName}
-              onChange={(event) => setGameName(event.target.value)}
+              onChange={(event) => { setGameName(event.target.value); setError(''); setSent(false); }}
               className="sr-input"
               placeholder="e.g. Celeste"
               aria-describedby="request-game-name-help"
@@ -100,7 +103,7 @@ export function GameRequestPage({ onRequireAuth }: { onRequireAuth: () => void }
               required
               maxLength={2048}
               value={gameUrl}
-              onChange={(event) => setGameUrl(event.target.value)}
+              onChange={(event) => { setGameUrl(event.target.value); setError(''); setSent(false); }}
               className="sr-input"
               placeholder="https://store.steampowered.com/..."
               aria-describedby={error ? 'request-game-url-error' : 'request-game-url-help'}

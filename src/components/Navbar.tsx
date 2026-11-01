@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, X, LayoutDashboard, LogOut, Gamepad2 } from 'lucide-react';
+import { Menu, X, LayoutDashboard, LogOut, Gamepad2, Users } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { SearchBar } from '@/components/SearchBar';
 import { useAuth } from '@/lib/auth';
@@ -53,6 +53,9 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
                 </a>
               )}
               {profile.role === 'owner' && (
+                <a href={linkHref('/members')} className="sr-btn-ghost" title="Manage members"><Users className="h-4 w-4" />Members</a>
+              )}
+              {profile.role === 'owner' && (
                 <a
                   href={linkHref('/dashboard')}
                   className="sr-btn-ghost"
@@ -71,7 +74,7 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
                 {profile.username}
               </a>
               <a href={linkHref('/account')} className="sr-btn-ghost">Account</a>
-              <button onClick={() => void signOut()} className="sr-btn-ghost">
+              <button onClick={() => void signOut()} className="sr-btn-ghost" aria-label="Sign out" title="Sign out">
                 <LogOut className="h-4 w-4" />
               </button>
             </div>
@@ -128,6 +131,9 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
                   >
                     Manage Games
                   </a>
+                )}
+                {profile.role === 'owner' && (
+                  <a href={linkHref('/members')} onClick={() => setMobileOpen(false)} className="sr-nav-link">Members</a>
                 )}
                 {profile.role === 'owner' && (
                   <a
