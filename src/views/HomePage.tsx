@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowUpRight, ExternalLink, Gamepad2, Search, ShieldCheck } from 'lucide-react';
+import { Gamepad2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchGames } from '@/lib/games';
 import type { Category, Game, Profile, Run } from '@/lib/types';
 import { GameCard } from '@/components/GameCard';
-import { SearchBar } from '@/components/SearchBar';
-import { Avatar } from '@/components/Avatar';
 import { linkHref } from '@/lib/router';
 import { formatTime, timeAgo } from '@/lib/format';
 
@@ -75,77 +73,58 @@ export function HomePage() {
   const featuredGames = games.filter((game) => game.is_featured);
   const popularGames = gamesByActivity.slice(0, 4);
 
+  const placeLabel = (rank: number) => rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
+  const rankOf = (run: Run) => run.status === 'verified' ? records.findIndex((r) => r.id === run.id) + 1 : 0;
+
   return (
-    <div className="sr-container pb-12">
-      <section className="grid gap-6 border-b border-[var(--sr-border)] py-7 md:grid-cols-[1fr_minmax(250px,360px)] md:items-end">
-        <div>
-          <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.16em] text-[var(--sr-primary)]"><span className="h-2 w-2 rounded-full bg-[var(--sr-primary)]" />Speedrun leaderboards</p>
-          <h1 className="text-3xl font-bold sm:text-4xl">The next split starts here.</h1>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--sr-text-dim)]">Browse game records, follow the runners setting them, and put your own time on the board.</p>
-        </div>
-        <div>
-          <label className="mb-1.5 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[var(--sr-text-muted)]"><Search className="h-3.5 w-3.5" />Find a game</label>
-          <SearchBar />
+    <div className="sr-container grid gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+      {loadError && <p role="status" className="sr-panel px-4 py-3 text-sm text-[var(--sr-text-dim)] lg:col-span-2">Some data could not be loaded. Try refreshing the page.</p>}
+
+      <section className="sr-panel min-w-0">
+        <h2 className="sr-panel-title">Latest runs</h2>
+        <div className="space-y-5 px-4 pb-4">
+          {loading ? <LoadingRows /> : recentRuns.length ? recentRuns.map((run) => {
+            const game = games.find((item) => item.id === run.game_id);
+            const runner = profiles[run.runner_id];
+            const category = categories[run.category_id];
+            const rank = rankOf(run);
+            return <article key={run.id} className="flex gap-4">
+              <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="flex-shrink-0"><GameArt game={game} /></a>
+              <div className="min-w-0 flex-1">
+                <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="font-bold text-[var(--sr-text)] hover:underline">{game?.title ?? 'Game'}</a>
+                <div className="mt-2 grid grid-cols-[minmax(0,1fr)_120px_160px] gap-3 rounded border border-[var(--sr-border)] bg-[var(--sr-bg-2)] px-3 py-2.5 text-sm">
+                  <div className="min-w-0"><span className="font-semibold text-[var(--sr-link)]">{category?.name ?? 'Category'}</span><p className="mt-1 truncate text-xs text-[var(--sr-text-muted)]">{run.platform}</p></div>
+                  <div><p className="font-semibold text-[var(--sr-text)]">{run.status === 'verified' ? (rank ? placeLabel(rank) : 'Verified') : run.status === 'pending' ? 'Pending' : 'Rejected'}</p><p className="mt-0.5 tabular-nums text-[var(--sr-text-dim)]">{formatTime(run.time_ms)}</p></div>
+                  <div className="min-w-0">{runner ? <a href={linkHref(`/profile/${runner.username}`)} className="block truncate font-semibold text-[var(--sr-link)] hover:underline">{runner.username}</a> : <span className="text-[var(--sr-text-muted)]">Runner</span>}<p className="mt-0.5 text-[var(--sr-text-dim)]">{timeAgo(run.created_at)}</p></div>
+                </div>
+              </div>
+            </article>;
+          }) : <EmptyLine text="No runs have been submitted yet." href="/games" />}
         </div>
       </section>
 
-      {loadError && <p role="status" className="mt-4 border-l-2 border-amber-500 px-3 py-2 text-sm text-amber-200">Some data could not be loaded. Try refreshing the page.</p>}
+      <aside className="min-w-0 space-y-4">
+        <section className="sr-panel">
+          <h2 className="sr-panel-title">World records <a href={linkHref('/games')} className="text-xs font-semibold normal-case text-[var(--sr-link)] hover:underline">All games</a></h2>
+          {loading ? <div className="px-4"><LoadingRows /></div> : records.length ? <ul>{records.map((run) => {
+            const game = games.find((item) => item.id === run.game_id);
+            const runner = profiles[run.runner_id];
+            return <li key={run.id} className="flex items-center gap-3 px-4 py-2.5 odd:bg-[var(--sr-surface-2)]"><GameArt game={game} small /><div className="min-w-0 flex-1"><a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="block truncate font-semibold text-[var(--sr-link)] hover:underline">{game?.title ?? 'Game'}</a><p className="truncate text-xs text-[var(--sr-text-muted)]">{categories[run.category_id]?.name ?? 'Category'} · {runner?.username ?? 'Runner'}</p></div><a href={run.video_url} target="_blank" rel="noopener noreferrer" className="text-right font-semibold tabular-nums text-[var(--sr-text)] hover:underline">{formatTime(run.time_ms)}</a></li>;
+          })}</ul> : <div className="px-4"><EmptyLine text="Records appear here once runs are verified." /></div>}
+        </section>
 
-      <div className="grid gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="min-w-0 space-y-10">
-          <section>
-            <SectionHeading eyebrow="Fastest verified times" title="Record board" href="/games" action="Browse leaderboards" />
-            {loading ? <LoadingRows /> : records.length ? (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[560px] text-left text-sm">
-                  <thead><tr className="border-b border-[var(--sr-border)] text-[11px] uppercase tracking-wider text-[var(--sr-text-muted)]"><th className="w-12 py-2.5 pr-3">#</th><th className="py-2.5 pr-3">Game / category</th><th className="py-2.5 pr-3">Runner</th><th className="py-2.5 pr-3">Time</th><th className="py-2.5">Proof</th></tr></thead>
-                  <tbody>{records.map((run, index) => {
-                    const game = games.find((item) => item.id === run.game_id);
-                    const runner = profiles[run.runner_id];
-                    const category = categories[run.category_id];
-                    return <tr key={run.id} className="border-b border-[var(--sr-border)]/70 hover:bg-[var(--sr-surface)]">
-                      <td className="py-3 pr-3 font-mono text-[var(--sr-text-muted)]">{String(index + 1).padStart(2, '0')}</td>
-                      <td className="py-3 pr-3"><a className="font-semibold text-[var(--sr-text)] hover:text-[var(--sr-primary)]" href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')}>{game?.title ?? 'Game'}</a><span className="mt-0.5 block text-xs text-[var(--sr-text-muted)]">{category?.name ?? 'Category'}</span></td>
-                      <td className="py-3 pr-3">{runner ? <a href={linkHref(`/profile/${runner.username}`)} className="flex items-center gap-2 text-[var(--sr-text-dim)] hover:text-white"><Avatar name={runner.username} src={runner.avatar_url} className="h-6 w-6 text-[10px]" />{runner.username}</a> : <span className="text-[var(--sr-text-muted)]">Runner</span>}</td>
-                      <td className="sr-mono py-3 pr-3 font-semibold text-white">{formatTime(run.time_ms)}</td>
-                      <td className="py-3"><a href={run.video_url} target="_blank" rel="noopener noreferrer" aria-label={`Watch ${runner?.username ?? 'runner'}'s proof`} className="inline-flex text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"><ExternalLink className="h-4 w-4" /></a></td>
-                    </tr>;
-                  })}</tbody>
-                </table>
-              </div>
-            ) : <EmptyLine text="Verified times will appear here as runs are reviewed." />}
-          </section>
+        <section className="sr-panel">
+          <h2 className="sr-panel-title">Popular games <a href={linkHref('/games')} className="text-xs font-semibold normal-case text-[var(--sr-link)] hover:underline">See all</a></h2>
+          {loading ? <div className="px-4"><LoadingRows /></div> : popularGames.length ? <ul>{popularGames.map((game) => <li key={game.id} className="odd:bg-[var(--sr-surface-2)]"><a href={linkHref(`/games/${game.slug}`)} className="flex items-center gap-3 px-4 py-2.5"><GameArt game={game} small /><span className="min-w-0 flex-1"><span className="block truncate font-semibold text-[var(--sr-link)] hover:underline">{game.title}</span>{game.is_featured && <span className="text-xs text-[var(--sr-text-muted)]">Featured</span>}</span><span className="text-center"><span className="block font-bold text-[var(--sr-text)]">{verifiedCounts[game.id] ?? 0}</span><span className="text-xs text-[var(--sr-text-muted)]">Runs</span></span></a></li>)}</ul> : <div className="px-4"><EmptyLine text="Games show here once they are added." /></div>}
+        </section>
 
-          <section>
-            <SectionHeading eyebrow="Browse the library" title="Featured games" href="/games" action="All games" />
-            {loading ? <LoadingRows /> : featuredGames.length ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">{featuredGames.slice(0, 4).map((game) => <GameCard key={game.id} game={game} runCount={verifiedCounts[game.id] ?? 0} />)}</div> : <EmptyLine text="No featured games yet. Browse the full library instead." href="/games" />}
-          </section>
-        </div>
-
-        <aside className="min-w-0 space-y-9">
-          <section>
-            <SectionHeading eyebrow="Latest 100 verified runs" title="Popular games" href="/games" action="See all" />
-            {loading ? <LoadingRows /> : popularGames.length ? <ol className="divide-y divide-[var(--sr-border)]">{popularGames.map((game, index) => <li key={game.id} className="flex items-center gap-3 py-2.5"><span className="sr-mono w-5 text-xs text-[var(--sr-text-muted)]">{String(index + 1).padStart(2, '0')}</span><a href={linkHref(`/games/${game.slug}`)} className="flex min-w-0 flex-1 items-center gap-3"><GameArt game={game} /><span className="min-w-0"><span className="block truncate font-semibold text-[var(--sr-text)] hover:text-[var(--sr-primary)]">{game.title}</span><span className="mt-0.5 block text-xs text-[var(--sr-text-muted)]">{verifiedCounts[game.id] ?? 0} of those runs</span></span><ArrowUpRight className="h-4 w-4 text-[var(--sr-text-muted)]" /></a></li>)}</ol> : <EmptyLine text="Games will show here once they are added." />}
-          </section>
-
-          <section>
-            <SectionHeading eyebrow="Latest submissions" title="Recent activity" />
-            {loading ? <LoadingRows /> : recentRuns.length ? <ol className="divide-y divide-[var(--sr-border)]">{recentRuns.slice(0, 6).map((run) => {
-              const game = games.find((item) => item.id === run.game_id);
-              const runner = profiles[run.runner_id];
-              return <li key={run.id} className="flex gap-3 py-3"><span className={`mt-1 h-2 w-2 flex-shrink-0 rounded-full ${run.status === 'verified' ? 'bg-emerald-400' : run.status === 'pending' ? 'bg-amber-400' : 'bg-red-400'}`} aria-hidden="true" /><div className="min-w-0"><p className="text-sm leading-5 text-[var(--sr-text-dim)]">{runner ? <a href={linkHref(`/profile/${runner.username}`)} className="font-semibold text-[var(--sr-text)] hover:text-[var(--sr-primary)]">{runner.username}</a> : <span className="font-semibold text-[var(--sr-text)]">A runner</span>} submitted a run for <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="font-semibold text-[var(--sr-text)] hover:text-[var(--sr-primary)]">{game?.title ?? 'a game'}</a></p><p className="mt-1 text-xs capitalize text-[var(--sr-text-muted)]">{run.status} <span aria-hidden="true">·</span> {timeAgo(run.created_at)}</p></div></li>;
-            })}</ol> : <EmptyLine text="New submissions will appear here." />}
-          </section>
-
-          <div className="border-t border-[var(--sr-border)] pt-4 text-xs leading-5 text-[var(--sr-text-muted)]"><ShieldCheck className="mb-2 h-4 w-4 text-[var(--sr-primary)]" />Runs are reviewed before verified times appear on leaderboards.</div>
-        </aside>
-      </div>
+        {featuredGames.length > 0 && <section className="sr-panel">
+          <h2 className="sr-panel-title">Featured</h2>
+          <div className="grid grid-cols-3 gap-3 px-4 pb-4">{featuredGames.slice(0, 6).map((game) => <GameCard key={game.id} game={game} />)}</div>
+        </section>}
+      </aside>
     </div>
   );
-}
-
-function SectionHeading({ eyebrow, title, href, action }: { eyebrow: string; title: string; href?: string; action?: string }) {
-  return <div className="mb-2 flex items-end justify-between gap-3 border-b border-[var(--sr-border)] pb-2"><div><p className="text-[10px] font-semibold uppercase tracking-[.14em] text-[var(--sr-text-muted)]">{eyebrow}</p><h2 className="mt-0.5 text-lg font-bold">{title}</h2></div>{href && <a href={linkHref(href)} className="flex-shrink-0 text-xs font-semibold text-[var(--sr-primary)] hover:text-white">{action ?? 'View all'} <span aria-hidden="true">→</span></a>}</div>;
 }
 
 function EmptyLine({ text, href }: { text: string; href?: string }) {
@@ -153,9 +132,9 @@ function EmptyLine({ text, href }: { text: string; href?: string }) {
 }
 
 function LoadingRows() {
-  return <div className="space-y-2 py-3" aria-label="Loading"><div className="h-8 animate-pulse bg-[var(--sr-surface)]" /><div className="h-8 animate-pulse bg-[var(--sr-surface)]" /><div className="h-8 animate-pulse bg-[var(--sr-surface)]" /></div>;
+  return <div className="space-y-2 py-3" aria-label="Loading"><div className="h-8 animate-pulse rounded bg-[var(--sr-surface-2)]" /><div className="h-8 animate-pulse rounded bg-[var(--sr-surface-2)]" /><div className="h-8 animate-pulse rounded bg-[var(--sr-surface-2)]" /></div>;
 }
 
-function GameArt({ game }: { game: Game }) {
-  return <span className="flex h-10 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-sm bg-[var(--sr-surface-2)] text-[10px] text-[var(--sr-text-muted)]">{game.cover_url ? <img src={game.cover_url} alt="" loading="lazy" className="h-full w-full object-cover" onError={(event) => event.currentTarget.remove()} /> : <Gamepad2 className="h-4 w-4" />}</span>;
+function GameArt({ game, small = false }: { game: Game | undefined; small?: boolean }) {
+  return <span className={`flex flex-shrink-0 items-center justify-center overflow-hidden rounded-sm bg-[var(--sr-surface-2)] text-[var(--sr-text-muted)] ${small ? 'h-12 w-9' : 'h-20 w-16'}`}>{game?.cover_url ? <img src={game.cover_url} alt="" loading="lazy" className="h-full w-full object-cover" onError={(event) => event.currentTarget.remove()} /> : <Gamepad2 className="h-4 w-4" />}</span>;
 }
