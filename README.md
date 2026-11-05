@@ -25,3 +25,11 @@ npm run dev
 
 Before deploying, apply database migrations `0003_add_moderator_role` and
 `0004_hide_games` to enable moderator access and game visibility controls.
+
+To enable visual run assessments, add `GEMINI_API_KEY` as a server-side secret
+in Lovable Cloud. Owners can request an assessment from the verification
+dashboard. Gemini analyzes the submitted public YouTube video alongside up to
+two public, owner-approved runs for the same game and category. These examples
+are provided as context for each assessment; this does not train or fine-tune a
+model. If the key is missing or videos are not public, the app records a
+non-visual assessment and requires owner review.

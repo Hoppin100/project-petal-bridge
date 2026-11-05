@@ -702,6 +702,9 @@ function RunDetailPanel({
 
         {run.status === 'pending' ? (
           <>
+            <p className="mb-3 text-xs text-emerald-700">
+              Your verify or reject decision, including the rejection reason, becomes a labeled example for future AI reviews of this game and category.
+            </p>
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={onVerify}
@@ -891,8 +894,9 @@ function AssessmentCard({
       </div>
 
       <p className="mt-3 text-xs text-emerald-800">
-        This is an AI recommendation, not an official verification status. The
-        AI does not analyze video frames and cannot approve runs on its own.
+        {assessment.evidence_basis === 'video_analysis'
+          ? 'Gemini reviewed sampled frames from this video and available approved/rejected examples for this game/category. Your past review decisions inform future assessments, but do not train or change the model itself. Sampling may miss events; the assistant cannot approve runs.'
+          : 'No video frames were analyzed. Configure GEMINI_API_KEY and use a public YouTube video for visual review. Metadata and statistics are not proof.'}{' '}
         Owners make the final decision.
       </p>
     </div>

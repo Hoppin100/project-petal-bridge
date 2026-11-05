@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Gamepad2 } from 'lucide-react';
+import { ArrowRight, Gamepad2, Trophy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchGames } from '@/lib/games';
 import type { Category, Game, Profile, Run } from '@/lib/types';
@@ -77,11 +77,36 @@ export function HomePage() {
   const rankOf = (run: Run) => run.status === 'verified' ? records.findIndex((r) => r.id === run.id) + 1 : 0;
 
   return (
-    <div className="sr-container grid gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+    <div className="sr-container grid gap-4 py-5 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <section className="sr-panel flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 lg:col-span-2">
+        <div className="max-w-2xl">
+          <p className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--sr-primary)]">
+            <Trophy aria-hidden="true" className="h-4 w-4" />
+            Community leaderboards
+          </p>
+          <h1 className="text-2xl font-bold text-[var(--sr-text)] sm:text-3xl">Every run counts.</h1>
+          <p className="mt-2 text-sm leading-6 text-[var(--sr-text-dim)]">
+            Find a game, submit your best time, and see how you stack up.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <a href={linkHref('/games')} className="sr-btn-primary">
+            Browse games
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
+          </a>
+          <a href={linkHref('/submit')} className="sr-btn-ghost">Submit a run</a>
+        </div>
+      </section>
+
       {loadError && <p role="status" className="sr-panel px-4 py-3 text-sm text-[var(--sr-text-dim)] lg:col-span-2">Some data could not be loaded. Try refreshing the page.</p>}
 
       <section className="sr-panel min-w-0">
-        <h2 className="sr-panel-title">Latest runs</h2>
+        <h2 className="sr-panel-title">
+          Latest runs
+          <span className="text-xs font-medium normal-case text-[var(--sr-text-muted)]">
+            New submissions and decisions
+          </span>
+        </h2>
         <div className="space-y-5 px-4 pb-4">
           {loading ? <LoadingRows /> : recentRuns.length ? recentRuns.map((run) => {
             const game = games.find((item) => item.id === run.game_id);
@@ -92,10 +117,10 @@ export function HomePage() {
               <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="flex-shrink-0"><GameArt game={game} /></a>
               <div className="min-w-0 flex-1">
                 <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="font-bold text-[var(--sr-text)] hover:underline">{game?.title ?? 'Game'}</a>
-                <div className="mt-2 grid grid-cols-[minmax(0,1fr)_120px_160px] gap-3 rounded border border-[var(--sr-border)] bg-[var(--sr-bg-2)] px-3 py-2.5 text-sm">
+                <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded border border-[var(--sr-border)] bg-[var(--sr-bg-2)] px-3 py-2.5 text-sm sm:grid-cols-[minmax(0,1fr)_120px_160px]">
                   <div className="min-w-0"><span className="font-semibold text-[var(--sr-link)]">{category?.name ?? 'Category'}</span><p className="mt-1 truncate text-xs text-[var(--sr-text-muted)]">{run.platform}</p></div>
-                  <div><p className="font-semibold text-[var(--sr-text)]">{run.status === 'verified' ? (rank ? placeLabel(rank) : 'Verified') : run.status === 'pending' ? 'Pending' : 'Rejected'}</p><p className="mt-0.5 tabular-nums text-[var(--sr-text-dim)]">{formatTime(run.time_ms)}</p></div>
-                  <div className="min-w-0">{runner ? <a href={linkHref(`/profile/${runner.username}`)} className="block truncate font-semibold text-[var(--sr-link)] hover:underline">{runner.username}</a> : <span className="text-[var(--sr-text-muted)]">Runner</span>}<p className="mt-0.5 text-[var(--sr-text-dim)]">{timeAgo(run.created_at)}</p></div>
+                  <div className="whitespace-nowrap"><p className="font-semibold text-[var(--sr-text)]">{run.status === 'verified' ? (rank ? placeLabel(rank) : 'Verified') : run.status === 'pending' ? 'Pending' : 'Rejected'}</p><p className="mt-0.5 tabular-nums text-[var(--sr-text-dim)]">{formatTime(run.time_ms)}</p></div>
+                  <div className="col-span-2 min-w-0 sm:col-span-1">{runner ? <a href={linkHref(`/profile/${runner.username}`)} className="block truncate font-semibold text-[var(--sr-link)] hover:underline">{runner.username}</a> : <span className="text-[var(--sr-text-muted)]">Runner</span>}<p className="mt-0.5 text-[var(--sr-text-dim)]">{timeAgo(run.created_at)}</p></div>
                 </div>
               </div>
             </article>;

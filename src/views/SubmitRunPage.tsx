@@ -1,4 +1,3 @@
-import { runVerification } from '@/lib/verify-run.functions';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Loader2, Send, Youtube, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -126,7 +125,7 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
 
     setSubmitting(true);
     try {
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('runs')
         .insert({
           game_id: gameId,
@@ -138,24 +137,11 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
           video_start_seconds: startSeconds,
           video_end_seconds: endSeconds,
           notes: notes.trim() || null,
-        })
-        .select('id')
-        .single();
+        });
 
       if (insertError) throw insertError;
-      const runId = data.id;
-
-      // Trigger AI assessment via edge function (best-effort, non-blocking).
-      // The function may fail or be unavailable; the run stays pending for
-      // manual review either way.
-      try {
-        await runVerification({ data: { runId } });
-      } catch (aiErr) {
-        console.warn('AI assessment unavailable, run remains pending', aiErr);
-      }
-
       setSuccess(
-        'Run submitted! It is now pending owner review. The SplitRush Verification Assistant will prepare an assessment for the owners.'
+        'Run submitted! It is pending owner review. An owner can request a video assessment from the dashboard.'
       );
       setHours('');
       setMinutes('');
@@ -165,7 +151,6 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
       setVideoStart('');
       setVideoEnd('');
       setNotes('');
-      void runId;
     } catch (cause) {
       console.error('submit failed', cause);
       setError('Could not submit your run. Please try again.');

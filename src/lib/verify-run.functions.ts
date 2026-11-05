@@ -1,10 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServerFn } from '@tanstack/react-start';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
+import type {
+  ApprovedRunVideo,
+  RejectedRunVideo,
+  RunVideoAnalysis,
+} from '@/lib/run-video-analysis.server';
 
-// Ported from the former verify-run edge function. Heuristic assessment;
-// never auto-approves a run.
-const MODEL_VERSION = 'splitrush-va-heuristic-v1';
+const HEURISTIC_VERSION = 'splitrush-va-heuristic-v2';
 
 interface RunRow {
   id: string;
@@ -26,12 +29,14 @@ interface RefRow {
   label: string;
   notes: string | null;
   run: {
+    id: string;
     time_ms: number;
     video_url: string;
     video_id: string | null;
     platform: string;
     status: string;
-  };
+    rejection_reason: string | null;
+  } | null;
 }
 
 interface CategoryRow {
@@ -60,7 +65,7 @@ export const runVerification = createServerFn({ method: 'POST' })
     if (!input || typeof input.runId !== 'string' || !/^[0-9a-f-]{36}$/i.test(input.runId)) throw new Error('runId required');
     return input;
   })
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const runId = data.runId;
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
     const admin = supabaseAdmin as unknown as SupabaseClient;
@@ -76,6 +81,13 @@ export const runVerification = createServerFn({ method: 'POST' })
     if (runErr || !run) {
       throw new Error('Run not found');
     }
+
+    const { data: isOwner, error: roleError } = await admin.rpc('has_role', {
+      _user_id: context.userId,
+      _role: 'owner',
+    });
+    if (roleError) throw new Error('Could not authorize video analysis');
+    if (!isOwner) throw new Error('Only an owner can analyze runs');
 
     // Fetch game + category for context
     const { data: game } = await admin
@@ -94,12 +106,77 @@ export const runVerification = createServerFn({ method: 'POST' })
     const { data: refs } = await admin
       .from('reference_examples')
       .select(
-        'id, run_id, label, notes, run:runs(id, time_ms, video_url, video_id, platform, status)'
+        'id, run_id, label, notes, run:runs(id, time_ms, video_url, video_id, platform, status, rejection_reason)'
       )
       .eq('game_id', run.game_id)
-      .eq('category_id', run.category_id);
+      .eq('category_id', run.category_id)
+      .order('created_at', { ascending: false });
 
     const refList = (refs as unknown as RefRow[]) ?? [];
+
+    const { data: approvedRunRows, error: approvedRunsError } = await admin
+      .from('runs')
+      .select('id, time_ms, video_id, platform')
+      .eq('game_id', run.game_id)
+      .eq('category_id', run.category_id)
+      .eq('status', 'verified')
+      .neq('id', run.id)
+      .not('video_id', 'is', null)
+      .order('verified_at', { ascending: false })
+      .limit(2);
+    if (approvedRunsError) {
+      console.error('Could not load approved run examples for video analysis', approvedRunsError);
+    }
+    const candidateApprovedRuns = (approvedRunRows as ApprovedRunVideo[] | null) ?? [];
+    const approvedRunResults = await Promise.all(
+      candidateApprovedRuns.map(async (approvedRun) => {
+        if (!approvedRun.video_id) return null;
+        try {
+          const response = await fetch(
+            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${approvedRun.video_id}&format=json`,
+            { signal: AbortSignal.timeout(6000) },
+          );
+          return response.ok ? approvedRun : null;
+        } catch (error) {
+          console.warn('Could not confirm approved reference video is public', error);
+          return null;
+        }
+      }),
+    );
+    const approvedRuns = approvedRunResults.filter(
+      (approvedRun): approvedRun is ApprovedRunVideo => approvedRun !== null,
+    );
+    const candidateRejectedRuns = refList
+      .flatMap((ref): RejectedRunVideo[] => {
+        if (ref.label !== 'rejected' || !ref.run || ref.run.id === run.id) return [];
+        return [{
+          id: ref.run.id,
+          time_ms: ref.run.time_ms,
+          video_id: ref.run.video_id,
+          platform: ref.run.platform,
+          reason: ref.notes ?? ref.run.rejection_reason,
+        }];
+      })
+      .filter((rejectedRun) => /^[A-Za-z0-9_-]{11}$/.test(rejectedRun.video_id ?? ''))
+      .slice(0, 2);
+    const rejectedRunResults = await Promise.all(
+      candidateRejectedRuns.map(async (rejectedRun) => {
+        if (!rejectedRun.video_id) return null;
+        try {
+          const response = await fetch(
+            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${rejectedRun.video_id}&format=json`,
+            { signal: AbortSignal.timeout(6000) },
+          );
+          return response.ok ? rejectedRun : null;
+        } catch (error) {
+          console.warn('Could not confirm rejected reference video is public', error);
+          return null;
+        }
+      }),
+    );
+    const rejectedRuns = rejectedRunResults.filter(
+      (rejectedRun): rejectedRun is RejectedRunVideo => rejectedRun !== null,
+    );
 
     // Fetch YouTube oEmbed metadata (publicly accessible, no API key needed)
     let oembed: OEmbedData | null = null;
@@ -125,7 +202,7 @@ export const runVerification = createServerFn({ method: 'POST' })
       }
     }
 
-    // ---- Heuristic assessment ----
+    // ---- Metadata and statistical assessment ----
     const verifiedRefs = refList.filter((r) => r.label === 'verified');
     const rejectedRefs = refList.filter((r) => r.label === 'rejected');
     const verifiedTimes = verifiedRefs
@@ -139,7 +216,6 @@ export const runVerification = createServerFn({ method: 'POST' })
       'incomplete';
     let confidence = 0.3;
 
-    // Evidence basis: we cannot analyze video content; we use metadata + stats.
     if (videoAccessible && oembed) {
       evidenceBasis = 'metadata';
       observed.push(
@@ -153,6 +229,38 @@ export const runVerification = createServerFn({ method: 'POST' })
           : 'No video ID was parsed from the submitted URL.'
       );
       concerns.push('Video could not be accessed — cannot confirm it shows the run.');
+    }
+
+    let frameAnalysis: RunVideoAnalysis | null = null;
+    let frameAnalysisUnavailable: string | null = null;
+    const geminiApiKey = process.env['GEMINI_API_KEY'];
+    if (!geminiApiKey) {
+      frameAnalysisUnavailable = 'GEMINI_API_KEY is not configured.';
+    } else if (!videoAccessible) {
+      frameAnalysisUnavailable = 'The submitted YouTube video is not publicly accessible.';
+    } else if (!run.video_id || !category) {
+      frameAnalysisUnavailable = 'The submitted video or category could not be identified.';
+    } else {
+      try {
+        const { analyzeRunVideos } = await import('@/lib/run-video-analysis.server');
+        frameAnalysis = await analyzeRunVideos({
+          apiKey: geminiApiKey,
+          gameTitle: game?.title ?? 'Unknown game',
+          categoryName: category.name,
+          timingRules: category.timing_rules,
+          submittedRun: {
+            id: run.id,
+            time_ms: run.time_ms,
+            video_id: run.video_id,
+            platform: run.platform,
+          },
+          approvedRuns,
+          rejectedRuns,
+        });
+      } catch (error) {
+        console.error('Gemini video frame analysis failed', error);
+        frameAnalysisUnavailable = 'Gemini could not complete video frame analysis.';
+      }
     }
 
     // Statistical comparison with verified reference examples
@@ -193,6 +301,25 @@ export const runVerification = createServerFn({ method: 'POST' })
         'No verified reference examples exist for this game/category yet. The AI cannot perform a statistical comparison. Owner judgment is especially important here.'
       );
       confidence = 0.25;
+    }
+
+    if (frameAnalysis) {
+      evidenceBasis = 'video_analysis';
+      confidence = frameAnalysis.confidence;
+      observed.push(frameAnalysis.summary, ...frameAnalysis.observations);
+      concerns.push(...frameAnalysis.concerns);
+      speculation.push(...frameAnalysis.speculation);
+      if (frameAnalysis.approvedRunIds.length === 0) {
+        speculation.push(
+          'No approved video references were available. The frame review assessed this run without positive video examples.',
+        );
+      }
+    } else {
+      speculation.push(
+        frameAnalysisUnavailable
+          ? `Video frames were not analyzed: ${frameAnalysisUnavailable}`
+          : 'Video frames were not analyzed.',
+      );
     }
 
     // Check if video title appears to relate to the game
@@ -247,9 +374,11 @@ export const runVerification = createServerFn({ method: 'POST' })
       | 'needs_review'
       | 'potential_concern';
 
-    if (concerns.length === 0 && observed.length > 0 && confidence >= 0.6) {
+    if (concerns.length > 0) {
+      recommendation = 'potential_concern';
+    } else if (frameAnalysis?.recommendation === 'likely_consistent') {
       recommendation = 'likely_consistent';
-    } else if (concerns.length > 0) {
+    } else if (frameAnalysis?.recommendation === 'potential_concern') {
       recommendation = 'potential_concern';
     } else {
       recommendation = 'needs_review';
@@ -265,7 +394,9 @@ export const runVerification = createServerFn({ method: 'POST' })
       observed,
       concerns,
       speculation,
-      videoAccessible
+      frameAnalysis,
+      frameAnalysisUnavailable,
+      videoAccessible,
     );
 
     const inputEvidence = {
@@ -277,6 +408,12 @@ export const runVerification = createServerFn({ method: 'POST' })
       video_url: run.video_url,
       video_id: run.video_id,
       video_accessible: videoAccessible,
+      video_frames_analyzed: frameAnalysis !== null,
+      analyzed_video_count: frameAnalysis?.analyzedVideoIds.length ?? 0,
+      approved_run_ids_analyzed: frameAnalysis?.approvedRunIds ?? [],
+      rejected_run_ids_analyzed: frameAnalysis?.rejectedRunIds ?? [],
+      frame_analysis_model: frameAnalysis?.modelVersion ?? null,
+      frame_analysis_unavailable_reason: frameAnalysisUnavailable,
       oembed_title: oembed?.title ?? null,
       oembed_author: oembed?.author_name ?? null,
       timing_rules: category?.timing_rules ?? null,
@@ -297,7 +434,7 @@ export const runVerification = createServerFn({ method: 'POST' })
       p_evidence_basis: evidenceBasis,
       p_observed_evidence: observed.join('\n'),
       p_speculation: speculation.join('\n'),
-      p_model_version: MODEL_VERSION,
+      p_model_version: frameAnalysis?.modelVersion ?? HEURISTIC_VERSION,
       p_input_evidence: inputEvidence,
       p_reference_example_ids: refIds,
     });
@@ -307,7 +444,17 @@ export const runVerification = createServerFn({ method: 'POST' })
       console.error('record_assessment failed', rpcErr);
       throw new Error('Could not record assessment');
     }
-    return { run_id: run.id, recommendation, confidence, evidence_basis: evidenceBasis, video_accessible: videoAccessible, reference_examples_used: refIds.length };
+    return {
+      run_id: run.id,
+      recommendation,
+      confidence,
+      evidence_basis: evidenceBasis,
+      video_accessible: videoAccessible,
+      video_frames_analyzed: frameAnalysis !== null,
+      approved_runs_analyzed: frameAnalysis?.approvedRunIds.length ?? 0,
+      rejected_runs_analyzed: frameAnalysis?.rejectedRunIds.length ?? 0,
+      reference_examples_used: refIds.length,
+    };
   });
 
 function buildExplanation(
@@ -315,7 +462,9 @@ function buildExplanation(
   observed: string[],
   concerns: string[],
   speculation: string[],
-  videoAccessible: boolean
+  frameAnalysis: RunVideoAnalysis | null,
+  frameAnalysisUnavailable: string | null,
+  videoAccessible: boolean,
 ): string {
   const parts: string[] = [];
   const recLabel = {
@@ -347,9 +496,11 @@ function buildExplanation(
 
   parts.push('');
   parts.push(
-    videoAccessible
-      ? 'NOTE: This assessment is based on YouTube metadata and statistical comparison. The model did NOT analyze video content frame-by-frame. Owners must watch the video to confirm timing and rule compliance.'
-      : 'NOTE: Video could not be accessed. This assessment is based on incomplete evidence. The run requires manual review and possibly additional proof.'
+    frameAnalysis
+      ? `NOTE: Gemini sampled frames from the submitted run, ${frameAnalysis.approvedRunIds.length} approved example(s), and ${frameAnalysis.rejectedRunIds.length} rejected example(s). Sampling may miss events; owners must watch the proof and make the final decision.`
+      : videoAccessible
+        ? `NOTE: Video frames were not analyzed${frameAnalysisUnavailable ? ` (${frameAnalysisUnavailable})` : ''}. Metadata/statistics cannot establish that the run is valid; manual review is required.`
+        : 'NOTE: Video could not be accessed. This assessment is based on incomplete evidence. The run requires manual review and possibly additional proof.'
   );
   parts.push('This is an AI recommendation, not an official verification status.');
 
