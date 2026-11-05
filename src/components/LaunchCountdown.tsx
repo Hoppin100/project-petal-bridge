@@ -1,5 +1,3 @@
-import { Clock3 } from 'lucide-react';
-
 export const LAUNCH_AT = Date.UTC(2026, 10, 8, 0, 0, 0);
 
 interface LaunchCountdownProps {
@@ -20,20 +18,14 @@ export function LaunchCountdown({
   const seconds = Math.floor((remaining % 60_000) / 1_000);
 
   return (
-    <section className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4 py-16">
-      <div className="w-full max-w-3xl text-center">
-        <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center border border-[var(--sr-primary)]/40 bg-[var(--sr-primary)]/10 text-[var(--sr-primary)]">
-          <Clock3 className="h-7 w-7" aria-hidden="true" />
-        </div>
-        <p className="sr-mono text-xs font-semibold uppercase tracking-[0.25em] text-[var(--sr-primary)]">
-          The starting line is almost here
-        </p>
-        <h1 className="mt-4 text-4xl font-bold tracking-tight text-[var(--sr-text)] sm:text-6xl">
-          SplitRush is launching soon
+    <section className="sr-container py-10">
+      <div className="sr-panel mx-auto max-w-3xl px-6 py-10 text-center">
+        <p className="text-sm font-bold uppercase text-[var(--sr-link)]">Coming soon</p>
+        <h1 className="mt-2 text-3xl font-extrabold text-[var(--sr-text)]">
+          SplitRush opens November 7
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-[var(--sr-text-dim)]">
-          We go live November 7, 2026 at 7:00 PM EST. Get ready to race up the
-          leaderboards.
+          Leaderboards go live November 7, 2026 at 7:00 PM EST. Make an account now so your name is ready.
         </p>
 
         <div
@@ -48,9 +40,9 @@ export function LaunchCountdown({
           ].map(([label, value]) => (
             <div
               key={label}
-              className="border border-[var(--sr-border)] bg-[var(--sr-surface)] px-3 py-5"
+              className="rounded border border-[var(--sr-border)] bg-[var(--sr-bg-2)] px-3 py-4"
             >
-              <p className="sr-mono text-4xl font-semibold tabular-nums text-[var(--sr-text)] sm:text-5xl">
+              <p className="text-4xl font-bold tabular-nums text-[var(--sr-text)]">
                 {String(value).padStart(2, '0')}
               </p>
               <p className="mt-2 text-xs font-medium uppercase tracking-widest text-[var(--sr-text-muted)]">
