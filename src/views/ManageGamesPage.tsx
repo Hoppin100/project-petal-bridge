@@ -10,9 +10,11 @@ import {
   AlertCircle,
   ArrowDown,
   ArrowUp,
+  ExternalLink,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchGames } from '@/lib/games';
+import { lookupSpeedrunGames } from '@/lib/speedrun-games.functions';
 import { useAuth } from '@/lib/auth';
 import type { Game, Category, GameRequest } from '@/lib/types';
 import { linkHref } from '@/lib/router';
@@ -522,10 +524,47 @@ function GameModal({
   const [slugTouched, setSlugTouched] = useState(!!game);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [speedrunLookup, setSpeedrunLookup] = useState<{
+    query: string;
+    status: 'idle' | 'checking' | 'found' | 'not-found' | 'error';
+    games: Array<{ id: string; name: string; url: string; exactMatch: boolean }>;
+  }>({ query: '', status: 'idle', games: [] });
 
   useEffect(() => {
     if (!slugTouched) setSlug(slugify(title));
   }, [title, slugTouched]);
+
+  useEffect(() => {
+    if (game) return;
+    const query = title.trim();
+    if (query.length < 3) {
+      setSpeedrunLookup({ query, status: 'idle', games: [] });
+      return;
+    }
+
+    let cancelled = false;
+    setSpeedrunLookup({ query, status: 'checking', games: [] });
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const result = await lookupSpeedrunGames({ data: { name: query } });
+        if (!cancelled) {
+          setSpeedrunLookup({
+            query,
+            status: result.games.length > 0 ? 'found' : 'not-found',
+            games: result.games,
+          });
+        }
+      } catch (cause) {
+        console.error('speedrun.com game lookup failed', cause);
+        if (!cancelled) setSpeedrunLookup({ query, status: 'error', games: [] });
+      }
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [title, game]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -672,6 +711,32 @@ function GameModal({
               autoFocus
               required
             />
+            {!game && speedrunLookup.status !== 'idle' && (
+              <div className="mt-2 text-sm text-[var(--sr-text-muted)]" role={speedrunLookup.status === 'error' ? 'alert' : 'status'}>
+                {speedrunLookup.status === 'checking' && 'Checking speedrun.com…'}
+                {speedrunLookup.status === 'not-found' && `No speedrun.com listing found for “${speedrunLookup.query}”.`}
+                {speedrunLookup.status === 'error' && 'Could not check speedrun.com. You can still create the game.'}
+                {speedrunLookup.status === 'found' && (
+                  <>
+                    <p className="mb-1 text-emerald-100">
+                      {speedrunLookup.games.some((item) => item.exactMatch)
+                        ? 'Exact game match found on speedrun.com:'
+                        : 'No exact match found. Possible speedrun.com matches:'}
+                    </p>
+                    <ul className="flex flex-col gap-1">
+                      {speedrunLookup.games.map((item) => (
+                        <li key={item.id}>
+                          <a href={item.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[var(--sr-primary)] hover:underline">
+                            {item.name}{item.exactMatch ? ' (exact match)' : ''}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
