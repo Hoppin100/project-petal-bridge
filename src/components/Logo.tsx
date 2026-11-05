@@ -20,8 +20,8 @@ export function Logo({ size = 'md', onClick }: LogoProps) {
       className="group flex items-center gap-2.5 font-bold tracking-tight"
     >
       <img src={logoAsset.url} alt="" aria-hidden="true" className={`${imageSize} flex-shrink-0 object-contain`} />
-      <span className={`${text} text-emerald-50`}>
-        SPLIT<span className="text-[var(--sr-primary)]">RUSH</span>
+      <span className={`${text} font-extrabold uppercase text-[var(--sr-header-text)]`}>
+        SplitRush
       </span>
     </a>
   );

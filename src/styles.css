@@ -194,3 +194,13 @@
 .sr-card:has(> table) { background: transparent; }
 table { border-collapse: collapse; }
 button, a { -webkit-tap-highlight-color: transparent; }
+
+/* Top bar: white text controls on the brand green bar */
+.sr-topbar .sr-nav-link { color: var(--sr-header-text); font-size: 1rem; font-weight: 500; opacity: .92; }
+.sr-topbar .sr-nav-link:hover { opacity: 1; text-decoration: underline; }
+.sr-topbar .sr-btn-ghost { border-color: transparent; color: var(--sr-header-text); }
+.sr-topbar .sr-btn-ghost:hover { background: rgb(0 0 0 / 14%); color: var(--sr-header-text); border-color: transparent; }
+.sr-topbar .sr-input { background: rgb(0 0 0 / 22%); border-color: rgb(255 255 255 / 12%); color: var(--sr-header-text); }
+.sr-topbar .sr-input::placeholder { color: rgb(255 255 255 / 65%); }
+.sr-topbar > div + div { background: var(--sr-bg-2); color: var(--sr-text); }
+.sr-topbar > div + div .sr-nav-link, .sr-topbar > div + div .sr-btn-ghost { color: var(--sr-text); }

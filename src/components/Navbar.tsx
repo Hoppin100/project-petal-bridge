@@ -16,20 +16,20 @@ export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navLinks = [
-    { label: 'Browse games', to: '/games' },
-    { label: 'Request a game', to: '/request-game' },
-    { label: 'Submit a run', to: '/submit' },
+    { label: 'Games', to: '/games' },
+    { label: 'Submit', to: '/submit' },
+    { label: 'Requests', to: '/request-game' },
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--sr-border)] bg-[var(--sr-bg)]">
-      <div className="sr-container flex min-h-14 items-center gap-5">
+    <header className="sr-topbar sticky top-0 z-40 bg-[var(--sr-header)] text-[var(--sr-header-text)]">
+      <div className="sr-container flex min-h-16 items-center gap-6">
         <div className="flex-shrink-0">
           <Logo onClick={() => setMobileOpen(false)} />
         </div>
 
         {!launchLocked && (
-          <nav aria-label="Main navigation" className="hidden items-center gap-5 border-l border-[var(--sr-border)] pl-5 md:flex">
+          <nav aria-label="Main navigation" className="hidden items-center gap-5 md:flex">
             {navLinks.map((l) => (
               <a key={l.to} href={linkHref(l.to)} className="sr-nav-link">
                 {l.label}
@@ -102,7 +102,7 @@ export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
               </button>
               <button
                 onClick={() => onOpenAuth('signup')}
-                className="sr-btn-primary"
+                className="sr-btn-light"
               >
                 Sign up
               </button>
