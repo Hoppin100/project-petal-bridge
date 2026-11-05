@@ -118,7 +118,7 @@ export function HomePage() {
 
           <section>
             <SectionHeading eyebrow="Browse the library" title="Featured games" href="/games" action="All games" />
-            {loading ? <LoadingRows /> : featuredGames.length ? <div className="grid gap-3 sm:grid-cols-2">{featuredGames.slice(0, 4).map((game) => <GameCard key={game.id} game={game} runCount={verifiedCounts[game.id] ?? 0} />)}</div> : <EmptyLine text="No featured games yet. Browse the full library instead." href="/games" />}
+            {loading ? <LoadingRows /> : featuredGames.length ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">{featuredGames.slice(0, 4).map((game) => <GameCard key={game.id} game={game} runCount={verifiedCounts[game.id] ?? 0} />)}</div> : <EmptyLine text="No featured games yet. Browse the full library instead." href="/games" />}
           </section>
         </div>
 
