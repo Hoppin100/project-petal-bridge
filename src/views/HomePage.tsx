@@ -100,33 +100,10 @@ export function HomePage() {
 
       {loadError && <p role="status" className="sr-panel px-4 py-3 text-sm text-[var(--sr-text-dim)] lg:col-span-2">Some data could not be loaded. Try refreshing the page.</p>}
 
-      <section className="sr-panel min-w-0">
-        <h2 className="sr-panel-title">
-          Latest runs
-          <span className="text-xs font-medium normal-case text-[var(--sr-text-muted)]">
-            New submissions and decisions
-          </span>
-        </h2>
-        <div className="space-y-5 px-4 pb-4">
-          {loading ? <LoadingRows /> : recentRuns.length ? recentRuns.map((run) => {
-            const game = games.find((item) => item.id === run.game_id);
-            const runner = profiles[run.runner_id];
-            const category = categories[run.category_id];
-            const rank = rankOf(run);
-            return <article key={run.id} className="flex gap-4">
-              <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="flex-shrink-0"><GameArt game={game} /></a>
-              <div className="min-w-0 flex-1">
-                <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="font-bold text-[var(--sr-text)] hover:underline">{game?.title ?? 'Game'}</a>
-                <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded border border-[var(--sr-border)] bg-[var(--sr-bg-2)] px-3 py-2.5 text-sm sm:grid-cols-[minmax(0,1fr)_120px_160px]">
-                  <div className="min-w-0"><span className="font-semibold text-[var(--sr-link)]">{category?.name ?? 'Category'}</span><p className="mt-1 truncate text-xs text-[var(--sr-text-muted)]">{run.platform}</p></div>
-                  <div className="whitespace-nowrap"><p className="font-semibold text-[var(--sr-text)]">{run.status === 'verified' ? (rank ? placeLabel(rank) : 'Verified') : run.status === 'pending' ? 'Pending' : 'Rejected'}</p><p className="mt-0.5 tabular-nums text-[var(--sr-text-dim)]">{formatTime(run.time_ms)}</p></div>
-                  <div className="col-span-2 min-w-0 sm:col-span-1">{runner ? <a href={linkHref(`/profile/${runner.username}`)} className="block truncate font-semibold text-[var(--sr-link)] hover:underline">{runner.username}</a> : <span className="text-[var(--sr-text-muted)]">Runner</span>}<p className="mt-0.5 text-[var(--sr-text-dim)]">{timeAgo(run.created_at)}</p></div>
-                </div>
-              </div>
-            </article>;
-          }) : <EmptyLine text="No runs have been submitted yet." href="/games" />}
-        </div>
-      </section>
+      {featuredGames.length > 0 && <section className="sr-panel min-w-0">
+        <h2 className="sr-panel-title">Featured games <a href={linkHref('/games')} className="text-xs font-semibold normal-case text-[var(--sr-link)] hover:underline">See all</a></h2>
+        <div className="grid grid-cols-3 gap-3 px-4 pb-4">{featuredGames.slice(0, 6).map((game) => <GameCard key={game.id} game={game} />)}</div>
+      </section>}
 
       <aside className="min-w-0 space-y-4">
         <section className="sr-panel">
@@ -143,10 +120,33 @@ export function HomePage() {
           {loading ? <div className="px-4"><LoadingRows /></div> : popularGames.length ? <ul>{popularGames.map((game) => <li key={game.id} className="odd:bg-[var(--sr-surface-2)]"><a href={linkHref(`/games/${game.slug}`)} className="flex items-center gap-3 px-4 py-2.5"><GameArt game={game} small /><span className="min-w-0 flex-1"><span className="block truncate font-semibold text-[var(--sr-link)] hover:underline">{game.title}</span>{game.is_featured && <span className="text-xs text-[var(--sr-text-muted)]">Featured</span>}</span><span className="text-center"><span className="block font-bold text-[var(--sr-text)]">{verifiedCounts[game.id] ?? 0}</span><span className="text-xs text-[var(--sr-text-muted)]">Runs</span></span></a></li>)}</ul> : <div className="px-4"><EmptyLine text="Games show here once they are added." /></div>}
         </section>
 
-        {featuredGames.length > 0 && <section className="sr-panel">
-          <h2 className="sr-panel-title">Featured</h2>
-          <div className="grid grid-cols-3 gap-3 px-4 pb-4">{featuredGames.slice(0, 6).map((game) => <GameCard key={game.id} game={game} />)}</div>
-        </section>}
+        <section className="sr-panel min-w-0">
+          <h2 className="sr-panel-title">
+            Latest runs
+            <span className="text-xs font-medium normal-case text-[var(--sr-text-muted)]">
+              New submissions and decisions
+            </span>
+          </h2>
+          <div className="space-y-5 px-4 pb-4">
+            {loading ? <LoadingRows /> : recentRuns.length ? recentRuns.map((run) => {
+              const game = games.find((item) => item.id === run.game_id);
+              const runner = profiles[run.runner_id];
+              const category = categories[run.category_id];
+              const rank = rankOf(run);
+              return <article key={run.id} className="flex gap-3">
+                <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="flex-shrink-0"><GameArt game={game} small /></a>
+                <div className="min-w-0 flex-1">
+                  <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="block truncate font-bold text-[var(--sr-text)] hover:underline">{game?.title ?? 'Game'}</a>
+                  <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded border border-[var(--sr-border)] bg-[var(--sr-bg-2)] px-3 py-2.5 text-sm">
+                    <div className="min-w-0"><span className="block truncate font-semibold text-[var(--sr-link)]">{category?.name ?? 'Category'}</span><p className="mt-1 truncate text-xs text-[var(--sr-text-muted)]">{run.platform}</p></div>
+                    <div className="whitespace-nowrap"><p className="font-semibold text-[var(--sr-text)]">{run.status === 'verified' ? (rank ? placeLabel(rank) : 'Verified') : run.status === 'pending' ? 'Pending' : 'Rejected'}</p><p className="mt-0.5 tabular-nums text-[var(--sr-text-dim)]">{formatTime(run.time_ms)}</p></div>
+                    <div className="col-span-2 min-w-0">{runner ? <a href={linkHref(`/profile/${runner.username}`)} className="block truncate font-semibold text-[var(--sr-link)] hover:underline">{runner.username}</a> : <span className="text-[var(--sr-text-muted)]">Runner</span>}<p className="mt-0.5 text-[var(--sr-text-dim)]">{timeAgo(run.created_at)}</p></div>
+                  </div>
+                </div>
+              </article>;
+            }) : <EmptyLine text="No runs have been submitted yet." href="/games" />}
+          </div>
+        </section>
       </aside>
     </div>
   );
