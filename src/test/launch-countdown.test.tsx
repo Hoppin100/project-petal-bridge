@@ -7,9 +7,9 @@ import {
 } from '@/components/LaunchCountdown';
 
 describe('LaunchCountdown', () => {
-  it('counts down to 7 PM EST on November 7, 2026', () => {
+  it('counts down to 8 PM EST on November 7, 2026', () => {
     expect(new Date(LAUNCH_AT).toISOString()).toBe(
-      '2026-11-08T00:00:00.000Z'
+      '2026-11-08T01:00:00.000Z'
     );
 
     render(
@@ -20,7 +20,7 @@ describe('LaunchCountdown', () => {
     );
 
     expect(
-      screen.getByText(/November 7, 2026 at 7:00 PM EST/)
+      screen.getByText(/November 7, 2026 at 8:00 PM EST/)
     ).toBeInTheDocument();
     expect(screen.getByText('02')).toBeInTheDocument();
     expect(screen.getByText('01')).toBeInTheDocument();

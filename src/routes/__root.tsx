@@ -9,6 +9,7 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { MessageCircle } from "lucide-react";
 import { AuthProvider } from "@/lib/auth";
 import { AuthModalContext } from "@/lib/auth-modal";
 import { registerNavigator } from "@/lib/router";
@@ -200,6 +201,15 @@ function AppShell() {
         </main>
         {siteReady && !launchLocked && <Footer />}
         {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitch={setAuthMode} />}
+        <a
+          href="https://discord.gg/JySJqfagAq"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-4 right-4 z-50 inline-flex items-center gap-2 rounded-full bg-[#5865F2] px-4 py-3 text-sm font-bold text-white shadow-lg transition-colors hover:bg-[#4752C4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          <MessageCircle aria-hidden="true" className="h-5 w-5" />
+          Join our Discord
+        </a>
       </div>
     </AuthModalContext.Provider>
   );

@@ -1,4 +1,4 @@
-export const LAUNCH_AT = Date.UTC(2026, 10, 8, 0, 0, 0);
+export const LAUNCH_AT = Date.UTC(2026, 10, 8, 1, 0, 0);
 
 interface LaunchCountdownProps {
   now: number;
@@ -25,7 +25,7 @@ export function LaunchCountdown({
           SplitRush opens November 7
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-[var(--sr-text-dim)]">
-          Leaderboards go live November 7, 2026 at 7:00 PM EST. Make an account now so your name is ready.
+          Leaderboards go live November 7, 2026 at 8:00 PM EST. Make an account now so your name is ready.
         </p>
 
         <div
