@@ -46,7 +46,7 @@ export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
 
         <div className="ml-auto flex items-center gap-2 md:ml-2">
           {profile ? (
-            <div className="hidden items-center gap-2 sm:flex">
+            <div className="hidden items-center gap-2 md:flex">
               {!launchLocked && profile.role === 'owner' && (
                 <a
                   href={linkHref('/manage')}
@@ -93,7 +93,7 @@ export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
               </button>
             </div>
           ) : (
-            <div className="hidden items-center gap-2 sm:flex">
+            <div className="hidden items-center gap-2 md:flex">
               <button
                 onClick={() => onOpenAuth('signin')}
                 className="sr-btn-ghost"
@@ -114,6 +114,7 @@ export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
             onClick={() => setMobileOpen((o) => !o)}
             aria-label="Toggle menu"
             aria-expanded={mobileOpen}
+            aria-controls="mobile-navigation"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -121,7 +122,7 @@ export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
       </div>
 
       {mobileOpen && (
-        <div className="border-t border-[var(--sr-border)] bg-[var(--sr-bg-2)] md:hidden">
+        <div id="mobile-navigation" className="border-t border-[var(--sr-border)] bg-[var(--sr-bg-2)] md:hidden">
           <div className="sr-container flex flex-col gap-3 border-t border-[var(--sr-border)] py-4">
             {!launchLocked && (
               <>

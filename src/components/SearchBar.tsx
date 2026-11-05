@@ -15,7 +15,7 @@ export function SearchBar({ onNavigate, variant = 'full' }: SearchBarProps) {
   const [results, setResults] = useState<Game[]>([]);
   const [open, setOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  const boxRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Guards against an older, slower search response overwriting a newer one.
   const requestIdRef = useRef(0);
@@ -89,7 +89,7 @@ export function SearchBar({ onNavigate, variant = 'full' }: SearchBarProps) {
           onFocus={() => results.length > 0 && setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder="Search games..."
-          className={`sr-input pl-9 ${variant === 'compact' ? 'py-1.5' : ''}`}
+          className={`sr-input pl-9 ${query ? 'pr-9' : ''} ${variant === 'compact' ? 'py-1.5' : ''}`}
           aria-label="Search games"
           role="combobox"
           aria-autocomplete="list"
@@ -104,7 +104,7 @@ export function SearchBar({ onNavigate, variant = 'full' }: SearchBarProps) {
               setResults([]);
               setOpen(false);
             }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-emerald-700 hover:text-emerald-300"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--sr-text-muted)] hover:bg-[var(--sr-surface-2)] hover:text-[var(--sr-text)]"
             aria-label="Clear search"
           >
             <X className="h-4 w-4" />

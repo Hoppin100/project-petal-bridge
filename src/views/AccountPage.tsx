@@ -130,13 +130,16 @@ export function AccountPage() {
   })();
 
   return (
-    <div className="sr-container max-w-xl py-10">
-      <h1 className="text-3xl font-extrabold text-emerald-50">Account settings</h1>
-      <p className="mt-1 text-sm text-emerald-700">
-        Update your username and profile details.
-      </p>
+    <div className="sr-container max-w-xl py-8 sm:py-10">
+      <header className="mb-6">
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Your profile</p>
+        <h1 className="text-3xl font-bold text-[var(--sr-text)]">Account settings</h1>
+        <p className="mt-1 text-sm text-[var(--sr-text-muted)]">
+          Update your username and profile details.
+        </p>
+      </header>
 
-      <form onSubmit={handleSave} className="mt-8 flex flex-col gap-5">
+      <form onSubmit={handleSave} className="sr-panel flex flex-col gap-5 p-4 sm:p-6">
         <div>
           <label className="mb-1 block text-sm font-medium text-emerald-100">
             Username

@@ -184,21 +184,23 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
   return (
     <div className="sr-container max-w-3xl py-8">
       <a
-        href={linkHref('/')}
-        className="mb-6 inline-flex items-center gap-1 text-sm text-emerald-700 hover:text-emerald-300"
+        href={linkHref('/games')}
+        className="mb-5 inline-flex items-center gap-1 text-sm text-[var(--sr-text-muted)] transition-colors hover:text-[var(--sr-text)]"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back
+        Back to games
       </a>
 
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Run submission</p>
-      <h1 className="text-3xl font-bold">Submit a run</h1>
-      <p className="mt-1 max-w-xl text-sm leading-6 text-[var(--sr-text-muted)]">
-        Provide your completion time and a YouTube link as proof. Owners will
-        review your submission before it appears on the leaderboard.
-      </p>
+      <header className="mb-6">
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Run submission</p>
+        <h1 className="text-3xl font-bold">Submit a run</h1>
+        <p className="mt-1 max-w-xl text-sm leading-6 text-[var(--sr-text-muted)]">
+          Provide your completion time and a YouTube link as proof. Owners will
+          review your submission before it appears on the leaderboard.
+        </p>
+      </header>
 
-      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="sr-panel flex flex-col gap-5 p-4 sm:p-6">
         {loadError && <p role="alert" className="border-l-2 border-red-400 px-3 py-2 text-sm text-red-300">{loadError}</p>}
         <div className="grid grid-cols-1 gap-4 border-y border-[var(--sr-border)] py-5 sm:grid-cols-2">
           <div>

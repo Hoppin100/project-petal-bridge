@@ -182,7 +182,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
 
   return (
     <div className="sr-container pb-12">
-      <div className="border-b border-[var(--sr-border)] py-6">
+      <section className="sr-panel my-6 p-4 sm:p-6">
         <div className="mb-5 flex items-center justify-between">
           <a
             href={linkHref('/games')}
@@ -195,7 +195,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
           <span className="text-xs text-[var(--sr-text-muted)]">{game.source || 'Game leaderboard'}</span>
         </div>
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-            <div className="flex h-28 w-full flex-shrink-0 items-center justify-center overflow-hidden rounded-sm border border-[var(--sr-border)] bg-[var(--sr-surface-2)] text-[var(--sr-text-muted)] sm:h-32 sm:w-52">
+            <div className="flex h-36 w-full flex-shrink-0 items-center justify-center overflow-hidden rounded-sm border border-[var(--sr-border)] bg-[var(--sr-surface-2)] text-[var(--sr-text-muted)] sm:h-40 sm:w-56">
               {game.cover_url ? (
                 <img
                   src={game.cover_url}
@@ -207,7 +207,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
             </div>
             <div className="min-w-0 flex-1">
               {game.is_featured && <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Featured leaderboard</p>}
-              <h1 className="text-2xl font-bold sm:text-3xl">
+              <h1 className="text-2xl font-bold sm:text-4xl">
                 {game.title}
               </h1>
               {game.blurb && (
@@ -245,11 +245,15 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
               </div>
             </div>
         </div>
-      </div>
+      </section>
 
-      <div className="py-6">
+      <section className="sr-panel p-4 sm:p-5">
         {categories.length === 0 ? (
-          <p className="text-emerald-700">No categories defined yet.</p>
+          <div className="py-8 text-center">
+            <Medal className="mx-auto h-8 w-8 text-[var(--sr-text-muted)]" />
+            <p className="mt-3 font-semibold text-[var(--sr-text)]">No categories yet</p>
+            <p className="mt-1 text-sm text-[var(--sr-text-muted)]">Leaderboards will appear here when categories are added.</p>
+          </div>
         ) : (
           <>
             <div className="mb-5 flex gap-1 overflow-x-auto border-b border-[var(--sr-border)]" role="tablist" aria-label="Leaderboard category">
@@ -285,7 +289,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
             <Leaderboard runs={runs} runnerMap={runnerMap} />
           </>
         )}
-      </div>
+      </section>
     </div>
   );
 }

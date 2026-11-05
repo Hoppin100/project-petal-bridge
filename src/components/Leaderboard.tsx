@@ -22,7 +22,7 @@ export function Leaderboard({ runs, runnerMap, showVideo = true }: LeaderboardPr
     return sorted.filter((run) => (runnerMap?.[run.runner_id]?.username ?? '').toLowerCase().includes(query));
   }, [sorted, filter, runnerMap]);
 
-  if (!sorted.length) return <div className="border-y border-[var(--sr-border)] py-10 text-center"><Medal className="mx-auto h-7 w-7 text-[var(--sr-text-muted)]" /><p className="mt-2 font-semibold text-[var(--sr-text)]">No verified runs yet</p><p className="mt-1 text-sm text-[var(--sr-text-muted)]">Submit the first run for this category.</p></div>;
+  if (!sorted.length) return <div className="sr-panel flex flex-col items-center px-4 py-10 text-center"><Medal className="h-8 w-8 text-[var(--sr-primary)]" /><p className="mt-3 font-semibold text-[var(--sr-text)]">No verified runs yet</p><p className="mt-1 text-sm text-[var(--sr-text-muted)]">Submit the first run for this category.</p></div>;
 
   return <section aria-label="Verified leaderboard">
     <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -34,7 +34,7 @@ export function Leaderboard({ runs, runnerMap, showVideo = true }: LeaderboardPr
       <span className="text-xs text-[var(--sr-text-muted)]">{filtered.length} of {sorted.length} verified {sorted.length === 1 ? 'run' : 'runs'}</span>
     </div>
 
-    {filtered.length === 0 ? <p className="border-y border-[var(--sr-border)] py-8 text-center text-sm text-[var(--sr-text-muted)]">No runners match “{filter}”.</p> : <div className="overflow-x-auto rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface)]">
+    {filtered.length === 0 ? <p className="sr-panel py-8 text-center text-sm text-[var(--sr-text-muted)]">No runners match “{filter}”.</p> : <div className="overflow-x-auto rounded-sm border border-[var(--sr-border)] bg-[var(--sr-surface)]">
       <table className="w-full min-w-[540px] text-sm">
         <caption className="sr-only">Verified runs sorted by completion time</caption>
         <thead><tr className="border-b border-[var(--sr-border)] bg-[var(--sr-surface-2)] text-left text-xs font-semibold text-[var(--sr-text-dim)]"><th scope="col" className="w-14 py-2.5 pl-3 pr-2">Rank</th><th scope="col" className="px-2 py-2.5">Runner</th><th scope="col" className="px-2 py-2.5">Time</th><th scope="col" className="hidden px-2 py-2.5 sm:table-cell">Platform</th><th scope="col" className="hidden px-2 py-2.5 md:table-cell">Submitted</th>{showVideo && <th scope="col" className="w-12 px-2 py-2.5 text-right">Video</th>}</tr></thead>

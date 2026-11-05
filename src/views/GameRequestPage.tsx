@@ -68,7 +68,7 @@ export function GameRequestPage({ onRequireAuth }: { onRequireAuth: () => void }
           <button className="sr-btn-primary" onClick={onRequireAuth}>Sign in</button>
         </div>
       ) : (
-        <form onSubmit={submit} className="mt-6 max-w-xl space-y-5" aria-busy={busy}>
+        <form onSubmit={submit} className="sr-panel mt-6 max-w-xl space-y-5 p-4 sm:p-6" aria-busy={busy}>
           {sent && (
             <div role="status" className="flex items-start gap-2 border border-emerald-800 bg-emerald-950/40 p-3 text-sm text-emerald-200">
               <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />

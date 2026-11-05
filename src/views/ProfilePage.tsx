@@ -112,17 +112,17 @@ export function ProfilePage({ username }: ProfilePageProps) {
   const rejectedRuns = runs.filter((r) => r.status === 'rejected');
 
   return (
-    <div className="sr-container py-10">
+    <div className="sr-container py-8 sm:py-10">
       <a
         href={linkHref('/')}
-        className="mb-6 inline-flex items-center gap-1 text-sm text-emerald-700 hover:text-emerald-300"
+        className="mb-5 inline-flex items-center gap-1 text-sm text-[var(--sr-text-muted)] transition-colors hover:text-[var(--sr-text)]"
       >
         <ArrowLeft className="h-4 w-4" />
         Back
       </a>
 
       {/* Profile header */}
-      <div className="flex flex-col gap-5 border-y border-[var(--sr-border)] py-6 sm:flex-row sm:items-center">
+      <section className="sr-panel flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
         <Avatar name={p.username} src={p.avatar_url} className="h-20 w-20 text-2xl sm:h-24 sm:w-24" />
         <div className="flex-1">
           <div className="flex items-center gap-2">
@@ -148,31 +148,31 @@ export function ProfilePage({ username }: ProfilePageProps) {
             Joined {timeAgo(p.created_at)}
           </p>
         </div>
-        <div className="flex gap-6 border-t border-[var(--sr-border)] pt-4 text-center sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
-          <div>
+        <div className="grid grid-cols-2 gap-3 border-t border-[var(--sr-border)] pt-4 text-center sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+          <div className="rounded-sm bg-[var(--sr-bg-2)] px-4 py-2">
             <p className="text-2xl font-bold text-emerald-50">
               {verifiedRuns.length}
             </p>
             <p className="text-xs text-emerald-700">Verified</p>
           </div>
-          <div>
+          <div className="rounded-sm bg-[var(--sr-bg-2)] px-4 py-2">
             <p className="text-2xl font-bold text-emerald-50">
               {pendingRuns.length}
             </p>
             <p className="text-xs text-emerald-700">Pending</p>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Run history */}
       <div className="mt-8">
-        <h2 className="mb-4 text-xl font-bold text-emerald-50">Run history</h2>
+        <h2 className="sr-panel-title mb-3 px-0 text-base">Run history</h2>
         {runs.length === 0 ? (
-          <div className="sr-card p-8 text-center text-emerald-700">
+          <div className="sr-panel p-8 text-center text-[var(--sr-text-muted)]">
             No runs submitted yet.
           </div>
         ) : (
-          <div className="divide-y divide-[var(--sr-border)] border-y border-[var(--sr-border)]">
+          <div className="sr-panel divide-y divide-[var(--sr-border)]">
             {runs.map((run) => {
               const game = gameMap[run.game_id];
               const cat = catMap[run.category_id];
@@ -185,7 +185,7 @@ export function ProfilePage({ username }: ProfilePageProps) {
               return (
                 <div
                   key={run.id}
-                  className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 px-4 py-4 odd:bg-[var(--sr-bg-2)]/50 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">

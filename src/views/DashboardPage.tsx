@@ -318,9 +318,10 @@ export function DashboardPage() {
     recentRuns.find((r) => r.id === selectedRunId) ?? null;
 
   return (
-    <div className="sr-container py-10">
-      <div className="mb-8">
-        <h1 className="flex items-center gap-2 text-3xl font-extrabold text-emerald-50">
+    <div className="sr-container py-8 sm:py-10">
+      <div className="mb-6">
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Owner tools</p>
+        <h1 className="flex items-center gap-2 text-3xl font-bold text-[var(--sr-text)]">
           <ShieldCheck className="h-7 w-7 text-[var(--sr-primary)]" />
           Verification Dashboard
         </h1>
@@ -330,7 +331,7 @@ export function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <StatCard label="Pending" value={stats.pending} color="text-yellow-400" />
         <StatCard label="Verified" value={stats.verified} color="text-emerald-400" />
         <StatCard label="Rejected" value={stats.rejected} color="text-red-400" />
@@ -340,13 +341,13 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Queue list */}
         <div className="lg:col-span-1">
-          <div className="mb-3 flex gap-2">
+          <div className="mb-3 flex gap-2 rounded-sm border border-[var(--sr-border)] bg-[var(--sr-surface)] p-1">
             <button
               onClick={() => setTab('pending')}
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
                 tab === 'pending'
                   ? 'bg-[var(--sr-primary)] text-[#06110a]'
-                  : 'border border-[var(--sr-border)] text-emerald-100'
+                  : 'text-[var(--sr-text-dim)] hover:bg-[var(--sr-surface-2)]'
               }`}
             >
               Pending ({pendingRuns.length})
@@ -356,7 +357,7 @@ export function DashboardPage() {
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
                 tab === 'history'
                   ? 'bg-[var(--sr-primary)] text-[#06110a]'
-                  : 'border border-[var(--sr-border)] text-emerald-100'
+                  : 'text-[var(--sr-text-dim)] hover:bg-[var(--sr-surface-2)]'
               }`}
             >
               Recent ({recentRuns.length})

@@ -216,10 +216,11 @@ export function ManageGamesPage() {
   }
 
   return (
-    <div className="sr-container py-10">
-      <div className="mb-8 flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center">
+    <div className="sr-container py-8 sm:py-10">
+      <div className="mb-6 flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="flex items-center gap-2 text-3xl font-extrabold text-emerald-50">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Owner tools</p>
+          <h1 className="flex items-center gap-2 text-3xl font-bold text-[var(--sr-text)]">
             <Gamepad2 className="h-7 w-7 text-[var(--sr-primary)]" />
             Manage Games
           </h1>
@@ -240,7 +241,7 @@ export function ManageGamesPage() {
       </div>
 
       {requests.length > 0 && (
-        <section className="sr-card mb-6 p-5">
+        <section className="sr-panel mb-6 p-4 sm:p-5">
           <h2 className="mb-3 text-lg font-bold text-emerald-50">Pending game requests <span className="sr-badge ml-2 bg-[var(--sr-surface-2)] text-emerald-100">{requests.length}</span></h2>
           <div className="divide-y divide-[var(--sr-border)]">
             {requests.map((request) => (
@@ -270,7 +271,7 @@ export function ManageGamesPage() {
           <Loader2 className="mx-auto h-6 w-6 animate-spin text-[var(--sr-primary)]" />
         </div>
       ) : games.length === 0 ? (
-        <div className="sr-card flex flex-col items-center gap-3 p-12 text-center">
+        <div className="sr-panel flex flex-col items-center gap-3 p-8 text-center sm:p-12">
           <Gamepad2 className="h-12 w-12 text-emerald-800" />
           <p className="text-emerald-100">No games yet</p>
           <p className="text-sm text-emerald-700">

@@ -228,7 +228,7 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
       onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-[var(--sr-border)] bg-[var(--sr-surface)] p-6 sr-fade-in"
+        className="sr-panel w-full max-w-md p-5 shadow-2xl sr-fade-in sm:p-6"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -236,12 +236,17 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
         tabIndex={-1}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 id="auth-title" className="text-xl font-bold text-emerald-50">
-            {mode === 'signup' ? 'Create your account' : 'Welcome back'}
-          </h2>
+          <div>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">
+              SplitRush account
+            </p>
+            <h2 id="auth-title" className="text-xl font-bold text-[var(--sr-text)]">
+              {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+            </h2>
+          </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-emerald-700 hover:text-emerald-300"
+            className="rounded-sm p-2 text-[var(--sr-text-muted)] transition-colors hover:bg-[var(--sr-surface-2)] hover:text-[var(--sr-text)]"
             aria-label="Close dialog"
           >
             <X className="h-5 w-5" />
