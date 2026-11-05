@@ -25,7 +25,7 @@ export function LaunchCountdown({
           SplitRush opens November 7
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-[var(--sr-text-dim)]">
-          Leaderboards go live at 7:00 PM EST. Make an account now so your name is ready.
+          Leaderboards go live November 7, 2026 at 7:00 PM EST. Make an account now so your name is ready.
         </p>
 
         <div
