@@ -198,7 +198,7 @@ function AppShell() {
             </div>
           )}
         </main>
-        {siteReady && !launchLocked && <Footer />}
+        {siteReady && <Footer launchLocked={launchLocked} />}
         {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitch={setAuthMode} />}
       </div>
     </AuthModalContext.Provider>
