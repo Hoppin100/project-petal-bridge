@@ -4,7 +4,7 @@ export const LAUNCH_AT = Date.UTC(2026, 10, 8, 0, 0, 0);
 
 interface LaunchCountdownProps {
   now: number;
-  username?: string;
+  username?: string | undefined;
   onOpenAuth: (mode: 'signin' | 'signup') => void;
 }
 
