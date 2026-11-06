@@ -13,6 +13,7 @@ import {
   ExternalLink,
   ClipboardCopy,
   ClipboardPaste,
+  Copy,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchGames } from '@/lib/games';
@@ -168,6 +169,35 @@ export function ManageGamesPage() {
     await loadCategories(gameId);
   }
 
+  async function duplicateSubcategory(category: Category, gameId: string) {
+    const categories = categoryMap[gameId] ?? [];
+    const existingNames = new Set(categories.map((item) => item.name.toLowerCase()));
+    let copyName = `${category.name} (Copy)`;
+    let suffix = 2;
+    while (existingNames.has(copyName.toLowerCase())) {
+      copyName = `${category.name} (Copy ${suffix})`;
+      suffix += 1;
+    }
+
+    setError(null);
+    setCategoryClipboardNotice(null);
+    const { error: duplicateError } = await supabase.from('categories').insert({
+      game_id: gameId,
+      parent_category_id: category.parent_category_id,
+      name: copyName,
+      timing_rules: category.timing_rules,
+      sort_order: Math.max(0, ...categories.map((item) => item.sort_order)) + 10,
+    });
+    if (duplicateError) {
+      console.error('duplicate subcategory failed', duplicateError);
+      setError(`Could not duplicate subcategory: ${duplicateError.message}`);
+      return;
+    }
+
+    await loadCategories(gameId);
+    setCategoryClipboardNotice(`Created "${copyName}" under the same main category.`);
+  }
+
   function copySubcategories(game: Game, parent: Category) {
     const subcategories = (categoryMap[game.id] ?? [])
       .filter((category) => category.parent_category_id === parent.id)
@@ -182,6 +212,24 @@ export function ManageGamesPage() {
     });
     setCategoryClipboardNotice(
       `Copied ${subcategories.length} subcategor${subcategories.length === 1 ? 'y' : 'ies'} from "${game.title}" → "${parent.name}". Choose Paste on a destination category.`
+    );
+  }
+
+  function copySubcategory(game: Game, category: Category) {
+    const parent = (categoryMap[game.id] ?? []).find((item) => item.id === category.parent_category_id);
+    if (!parent) {
+      setError('Could not find the main category for this subcategory.');
+      return;
+    }
+
+    setError(null);
+    setSubcategoryClipboard({
+      sourceGameTitle: game.title,
+      sourceCategoryName: parent.name,
+      categories: [{ name: category.name, timing_rules: category.timing_rules }],
+    });
+    setCategoryClipboardNotice(
+      `Copied subcategory "${category.name}" from "${game.title}" → "${parent.name}". Choose Paste on a destination category.`
     );
   }
 
@@ -531,6 +579,30 @@ export function ManageGamesPage() {
                               </div>
                             </div>
                             <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-1">
+                              {cat.parent_category_id && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => copySubcategory(game, cat)}
+                                    className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
+                                    aria-label={`Copy subcategory ${cat.name}`}
+                                    title="Copy subcategory"
+                                  >
+                                    <ClipboardCopy className="h-3.5 w-3.5" />
+                                    Copy
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => void duplicateSubcategory(cat, game.id)}
+                                    className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
+                                    aria-label={`Duplicate subcategory ${cat.name}`}
+                                    title="Duplicate subcategory under the same main category"
+                                  >
+                                    <Copy className="h-3.5 w-3.5" />
+                                    Duplicate
+                                  </button>
+                                </>
+                              )}
                               <button
                                 onClick={() => setShowCatModal({ gameId: game.id, cat, parentCategoryId: cat.parent_category_id })}
                                 className="rounded p-1.5 text-emerald-700 hover:text-emerald-300"
