@@ -65,12 +65,17 @@ export function ManageGamesPage() {
   }, []);
 
   const loadCategories = useCallback(async (gameId: string) => {
-    const { data } = await supabase
+    const { data, error: categoriesError } = await supabase
       .from('categories')
       .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at')
       .eq('game_id', gameId)
       .order('sort_order')
       .order('name');
+    if (categoriesError) {
+      console.error('load categories failed', categoriesError);
+      setError(`Could not load categories: ${categoriesError.message}`);
+      return;
+    }
     setCategoryMap((prev) => ({ ...prev, [gameId]: (data as Category[]) ?? [] }));
   }, []);
 
@@ -158,7 +163,11 @@ export function ManageGamesPage() {
   }
 
   async function handleDeleteCategory(cat: Category, gameId: string) {
-    if (!confirm(`Delete category "${cat.name}" and all its runs? This cannot be undone.`)) return;
+    const parentName = (categoryMap[gameId] ?? []).find((item) => item.id === cat.parent_category_id)?.name;
+    const categoryLabel = cat.parent_category_id
+      ? `subcategory "${cat.name}" under "${parentName ?? 'unknown category'}"`
+      : `category "${cat.name}"`;
+    if (!confirm(`Delete ${categoryLabel} and all its runs? This cannot be undone.`)) return;
     setError(null);
     const { error: delErr } = await supabase.from('categories').delete().eq('id', cat.id);
     if (delErr) {
@@ -181,13 +190,17 @@ export function ManageGamesPage() {
 
     setError(null);
     setCategoryClipboardNotice(null);
-    const { error: duplicateError } = await supabase.from('categories').insert({
-      game_id: gameId,
-      parent_category_id: category.parent_category_id,
-      name: copyName,
-      timing_rules: category.timing_rules,
-      sort_order: Math.max(0, ...categories.map((item) => item.sort_order)) + 10,
-    });
+    const { data: duplicatedCategory, error: duplicateError } = await supabase
+      .from('categories')
+      .insert({
+        game_id: gameId,
+        parent_category_id: category.parent_category_id,
+        name: copyName,
+        timing_rules: category.timing_rules,
+        sort_order: Math.max(0, ...categories.map((item) => item.sort_order)) + 10,
+      })
+      .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at')
+      .single();
     if (duplicateError) {
       console.error('duplicate subcategory failed', duplicateError);
       setError(`Could not duplicate subcategory: ${duplicateError.message}`);
@@ -195,6 +208,11 @@ export function ManageGamesPage() {
     }
 
     await loadCategories(gameId);
+    setShowCatModal({
+      gameId,
+      cat: duplicatedCategory as Category,
+      parentCategoryId: category.parent_category_id,
+    });
     setCategoryClipboardNotice(`Created "${copyName}" under the same main category.`);
   }
 
@@ -249,22 +267,8 @@ export function ManageGamesPage() {
       if (loadError) throw loadError;
 
       const currentCategories = (existingCategories as Category[]) ?? [];
-      const existingNames = new Set(currentCategories.map((category) => category.name.toLowerCase()));
-      const categoriesToPaste = subcategoryClipboard.categories.filter(
-        (category) => !existingNames.has(category.name.toLowerCase())
-      );
-      const skippedCount = subcategoryClipboard.categories.length - categoriesToPaste.length;
-
-      if (categoriesToPaste.length === 0) {
-        setCategoryMap((prev) => ({ ...prev, [game.id]: currentCategories }));
-        setCategoryClipboardNotice(
-          `No subcategories pasted into "${parent.name}": all ${skippedCount} already exist in "${game.title}".`
-        );
-        return;
-      }
-
       const lastSortOrder = Math.max(0, ...currentCategories.map((category) => category.sort_order));
-      const rows = categoriesToPaste.map((category, index) => ({
+      const rows = subcategoryClipboard.categories.map((category, index) => ({
         game_id: game.id,
         parent_category_id: parent.id,
         name: category.name,
@@ -281,7 +285,7 @@ export function ManageGamesPage() {
         .sort((left, right) => left.sort_order - right.sort_order || left.name.localeCompare(right.name));
       setCategoryMap((prev) => ({ ...prev, [game.id]: updatedCategories }));
       setCategoryClipboardNotice(
-        `Pasted ${categoriesToPaste.length} subcategor${categoriesToPaste.length === 1 ? 'y' : 'ies'} into "${parent.name}"${skippedCount ? `; skipped ${skippedCount} already in "${game.title}"` : ''}.`
+        `Pasted ${rows.length} subcategor${rows.length === 1 ? 'y' : 'ies'} into "${parent.name}".`
       );
     } catch (cause) {
       console.error('paste subcategories failed', cause);
@@ -571,6 +575,11 @@ export function ManageGamesPage() {
                               <span className="sr-mono flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm bg-[var(--sr-surface-2)] text-xs font-semibold text-[var(--sr-primary)]">{cat.parent_category_id ? '↳' : String(index + 1).padStart(2, '0')}</span>
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold text-emerald-50">{cat.name}</p>
+                                {cat.parent_category_id && (
+                                  <p className="text-xs text-[var(--sr-text-muted)]">
+                                    Subcategory of {cats.find((item) => item.id === cat.parent_category_id)?.name ?? 'unknown category'}
+                                  </p>
+                                )}
                                 {cat.timing_rules && (
                                   <p className="truncate text-xs text-emerald-700">
                                     {cat.timing_rules}
@@ -606,13 +615,14 @@ export function ManageGamesPage() {
                               <button
                                 onClick={() => setShowCatModal({ gameId: game.id, cat, parentCategoryId: cat.parent_category_id })}
                                 className="rounded p-1.5 text-emerald-700 hover:text-emerald-300"
-                                aria-label={`Edit ${cat.name}`}
+                                aria-label={`Edit ${cat.parent_category_id ? 'subcategory' : 'category'} ${cat.name}`}
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDeleteCategory(cat, game.id)}
                                 className="rounded p-1.5 text-red-700 hover:text-red-400"
+                                aria-label={`Delete ${cat.parent_category_id ? 'subcategory' : 'category'} ${cat.name}`}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -1182,9 +1192,11 @@ function CategoryModal({
       setError('Category name is required.');
       return;
     }
-    const dupe = existingCategories.find(
-      (c) => c.name.toLowerCase() === trimmedName.toLowerCase() && c.id !== category?.id
-    );
+    const dupe = parentCategoryId
+      ? undefined
+      : existingCategories.find(
+          (c) => c.name.toLowerCase() === trimmedName.toLowerCase() && c.id !== category?.id
+        );
     if (dupe) {
       setError('A category with that name already exists for this game.');
       return;
@@ -1265,7 +1277,7 @@ function CategoryModal({
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 id="category-modal-title" className="text-xl font-bold text-emerald-50">
-              {category ? 'Edit category' : 'New category'}
+              {category ? (category.parent_category_id ? 'Edit subcategory' : 'Edit category') : 'New category'}
             </h2>
             <p className="mt-1 text-xs text-[var(--sr-text-muted)]">Choose how runners will find and compare these runs.</p>
           </div>
@@ -1337,6 +1349,11 @@ function CategoryModal({
                         className="accent-[var(--sr-primary)]"
                       />
                       {item.name}
+                      {item.parent_category_id && (
+                        <span className="text-[var(--sr-text-muted)]">
+                          {' '}(under {existingCategories.find((parent) => parent.id === item.parent_category_id)?.name ?? 'unknown category'})
+                        </span>
+                      )}
                     </label>
                   ))}
               </div>
