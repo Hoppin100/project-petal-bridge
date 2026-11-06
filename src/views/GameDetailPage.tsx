@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Trophy, ArrowLeft, ExternalLink, Info, Gamepad2, Medal } from 'lucide-react';
+import { Trophy, ArrowLeft, ExternalLink, Info, Gamepad2, Medal, ChevronDown, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchGameBySlug } from '@/lib/games';
 import type { Game, Category, Run, Profile } from '@/lib/types';
@@ -19,6 +19,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [runnerMap, setRunnerMap] = useState<Record<string, Profile>>({});
   const [activeCat, setActiveCat] = useState<string | null>(null);
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [underConstruction, setUnderConstruction] = useState(false);
@@ -73,14 +74,16 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
 
       const { data: cats } = await supabase
         .from('categories')
-        .select('id, game_id, name, timing_rules, sort_order, created_at')
+        .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at')
         .eq('game_id', g.id)
         .order('sort_order')
         .order('name');
       if (cancelled) return;
       const catList = (cats as Category[]) ?? [];
+      const firstCategory = catList.find((category) => !category.parent_category_id) ?? catList[0];
       setCategories(catList);
-      if (catList.length > 0) setActiveCat(catList[0]!.id);
+      setActiveCat(firstCategory?.id ?? null);
+      setExpandedCategoryId(null);
 
       setLoading(false);
     })().catch((error: unknown) => {
@@ -178,6 +181,13 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   }
 
   const activeCategory = categories.find((c) => c.id === activeCat);
+  const mainCategories = categories.filter((category) => !category.parent_category_id);
+  const activeMainCategory = activeCategory?.parent_category_id
+    ? mainCategories.find((category) => category.id === activeCategory.parent_category_id)
+    : activeCategory;
+  const visibleSubcategories = categories.filter(
+    (category) => category.parent_category_id === expandedCategoryId
+  );
   const worldRecord = runs[0]; // sorted ascending
 
   return (
@@ -256,23 +266,66 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
           </div>
         ) : (
           <>
-            <div className="mb-5 flex gap-1 overflow-x-auto border-b border-[var(--sr-border)]" role="tablist" aria-label="Leaderboard category">
-              {categories.map((c) => (
+            <div className="flex gap-1 overflow-x-auto border-b border-[var(--sr-border)]" role="tablist" aria-label="Leaderboard category">
+              {mainCategories.map((category) => {
+                const hasSubcategories = categories.some((item) => item.parent_category_id === category.id);
+                const isActive = activeMainCategory?.id === category.id;
+                const isExpanded = expandedCategoryId === category.id;
+                return (
                 <button
-                  key={c.id}
+                  key={category.id}
                   role="tab"
-                  aria-selected={activeCat === c.id}
-                  onClick={() => setActiveCat(c.id)}
-                  className={`flex-shrink-0 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
-                    activeCat === c.id
+                  aria-selected={isActive}
+                  aria-controls={hasSubcategories ? `subcategories-${category.id}` : undefined}
+                  onClick={() => {
+                    setActiveCat(category.id);
+                    setExpandedCategoryId((current) =>
+                      hasSubcategories ? (current === category.id ? null : category.id) : null
+                    );
+                  }}
+                  className={`inline-flex flex-shrink-0 items-center gap-1 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
+                    isActive
                       ? 'border-[var(--sr-primary)] text-white'
                       : 'border-transparent text-[var(--sr-text-muted)] hover:text-white'
                   }`}
                 >
-                  {c.name}
+                  {category.name}
+                  {hasSubcategories && (isExpanded
+                    ? <ChevronDown aria-hidden="true" className="h-4 w-4" />
+                    : <ChevronRight aria-hidden="true" className="h-4 w-4" />)}
                 </button>
-              ))}
+                );
+              })}
             </div>
+
+            {expandedCategoryId && visibleSubcategories.length > 0 && (
+              <div
+                id={`subcategories-${expandedCategoryId}`}
+                className="mb-5 border-b border-[var(--sr-border)] bg-[var(--sr-surface)] px-3 py-3"
+                aria-label={`Subcategories of ${mainCategories.find((category) => category.id === expandedCategoryId)?.name ?? 'category'}`}
+              >
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--sr-text-muted)]">
+                  Subcategories
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {visibleSubcategories.map((category) => (
+                    <button
+                      key={category.id}
+                      type="button"
+                      aria-pressed={activeCat === category.id}
+                      onClick={() => setActiveCat(category.id)}
+                      className={`rounded border px-3 py-1.5 text-sm transition-colors ${
+                        activeCat === category.id
+                          ? 'border-[var(--sr-primary)] bg-[var(--sr-primary)]/10 text-white'
+                          : 'border-[var(--sr-border)] text-[var(--sr-text-muted)] hover:border-[var(--sr-border-hover)] hover:text-white'
+                      }`}
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {activeCategory?.timing_rules && (
               <div className="mb-5 flex items-start gap-2 border-l-2 border-[var(--sr-border-hover)] bg-[var(--sr-surface)] px-3 py-2.5 text-sm text-[var(--sr-text-dim)]">

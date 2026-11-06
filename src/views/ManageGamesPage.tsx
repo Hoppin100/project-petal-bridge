@@ -11,6 +11,8 @@ import {
   ArrowDown,
   ArrowUp,
   ExternalLink,
+  ClipboardCopy,
+  ClipboardPaste,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchGames } from '@/lib/games';
@@ -31,6 +33,13 @@ export function ManageGamesPage() {
   const [showCatModal, setShowCatModal] = useState<{ gameId: string; cat: Category | null; parentCategoryId: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [requests, setRequests] = useState<GameRequest[]>([]);
+  const [subcategoryClipboard, setSubcategoryClipboard] = useState<{
+    sourceGameTitle: string;
+    sourceCategoryName: string;
+    categories: Pick<Category, 'name' | 'timing_rules'>[];
+  } | null>(null);
+  const [categoryClipboardNotice, setCategoryClipboardNotice] = useState<string | null>(null);
+  const [pastingIntoCategoryId, setPastingIntoCategoryId] = useState<string | null>(null);
 
   const loadGames = useCallback(async () => {
     const { games: gameList, error: loadError } = await fetchGames();
@@ -159,6 +168,86 @@ export function ManageGamesPage() {
     await loadCategories(gameId);
   }
 
+  function copySubcategories(game: Game, parent: Category) {
+    const subcategories = (categoryMap[game.id] ?? [])
+      .filter((category) => category.parent_category_id === parent.id)
+      .map(({ name, timing_rules }) => ({ name, timing_rules }));
+    if (subcategories.length === 0) return;
+
+    setError(null);
+    setSubcategoryClipboard({
+      sourceGameTitle: game.title,
+      sourceCategoryName: parent.name,
+      categories: subcategories,
+    });
+    setCategoryClipboardNotice(
+      `Copied ${subcategories.length} subcategor${subcategories.length === 1 ? 'y' : 'ies'} from "${game.title}" → "${parent.name}". Choose Paste on a destination category.`
+    );
+  }
+
+  async function pasteSubcategories(game: Game, parent: Category) {
+    if (!subcategoryClipboard || pastingIntoCategoryId) return;
+
+    setError(null);
+    setCategoryClipboardNotice(null);
+    setPastingIntoCategoryId(parent.id);
+    try {
+      const { data: existingCategories, error: loadError } = await supabase
+        .from('categories')
+        .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at')
+        .eq('game_id', game.id)
+        .order('sort_order')
+        .order('name');
+      if (loadError) throw loadError;
+
+      const currentCategories = (existingCategories as Category[]) ?? [];
+      const existingNames = new Set(currentCategories.map((category) => category.name.toLowerCase()));
+      const categoriesToPaste = subcategoryClipboard.categories.filter(
+        (category) => !existingNames.has(category.name.toLowerCase())
+      );
+      const skippedCount = subcategoryClipboard.categories.length - categoriesToPaste.length;
+
+      if (categoriesToPaste.length === 0) {
+        setCategoryMap((prev) => ({ ...prev, [game.id]: currentCategories }));
+        setCategoryClipboardNotice(
+          `No subcategories pasted into "${parent.name}": all ${skippedCount} already exist in "${game.title}".`
+        );
+        return;
+      }
+
+      const lastSortOrder = Math.max(0, ...currentCategories.map((category) => category.sort_order));
+      const rows = categoriesToPaste.map((category, index) => ({
+        game_id: game.id,
+        parent_category_id: parent.id,
+        name: category.name,
+        timing_rules: category.timing_rules,
+        sort_order: lastSortOrder + (index + 1) * 10,
+      }));
+      const { data: insertedCategories, error: insertError } = await supabase
+        .from('categories')
+        .insert(rows)
+        .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at');
+      if (insertError) throw insertError;
+
+      const updatedCategories = [...currentCategories, ...((insertedCategories as Category[]) ?? [])]
+        .sort((left, right) => left.sort_order - right.sort_order || left.name.localeCompare(right.name));
+      setCategoryMap((prev) => ({ ...prev, [game.id]: updatedCategories }));
+      setCategoryClipboardNotice(
+        `Pasted ${categoriesToPaste.length} subcategor${categoriesToPaste.length === 1 ? 'y' : 'ies'} into "${parent.name}"${skippedCount ? `; skipped ${skippedCount} already in "${game.title}"` : ''}.`
+      );
+    } catch (cause) {
+      console.error('paste subcategories failed', cause);
+      const detail =
+        typeof cause === 'object' && cause !== null && 'message' in cause &&
+        typeof cause.message === 'string'
+          ? cause.message
+          : '';
+      setError(detail ? `Could not paste subcategories: ${detail}` : 'Could not paste subcategories.');
+    } finally {
+      setPastingIntoCategoryId(null);
+    }
+  }
+
   async function moveCategory(gameId: string, index: number, direction: -1 | 1) {
     if (reorderingGameId === gameId) return;
     const categories = [...(categoryMap[gameId] ?? [])];
@@ -263,6 +352,23 @@ export function ManageGamesPage() {
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
           <AlertCircle className="h-4 w-4" />
           {error}
+        </div>
+      )}
+      {categoryClipboardNotice && (
+        <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--sr-border)] bg-[var(--sr-surface)] px-3 py-2 text-sm text-emerald-100">
+          <span>{categoryClipboardNotice}</span>
+          {subcategoryClipboard && (
+            <button
+              type="button"
+              onClick={() => {
+                setSubcategoryClipboard(null);
+                setCategoryClipboardNotice('Subcategory clipboard cleared.');
+              }}
+              className="text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
+            >
+              Clear copied subcategories
+            </button>
+          )}
         </div>
       )}
 
@@ -424,7 +530,7 @@ export function ManageGamesPage() {
                                 )}
                               </div>
                             </div>
-                            <div className="flex flex-shrink-0 items-center gap-1">
+                            <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-1">
                               <button
                                 onClick={() => setShowCatModal({ gameId: game.id, cat, parentCategoryId: cat.parent_category_id })}
                                 className="rounded p-1.5 text-emerald-700 hover:text-emerald-300"
@@ -439,13 +545,43 @@ export function ManageGamesPage() {
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
                               {!cat.parent_category_id && (
-                                <button
-                                  type="button"
-                                  onClick={() => setShowCatModal({ gameId: game.id, cat: null, parentCategoryId: cat.id })}
-                                  className="rounded px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
-                                >
-                                  Add subcategory
-                                </button>
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowCatModal({ gameId: game.id, cat: null, parentCategoryId: cat.id })}
+                                    className="rounded px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
+                                  >
+                                    Add subcategory
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => copySubcategories(game, cat)}
+                                    disabled={!cats.some((category) => category.parent_category_id === cat.id)}
+                                    title="Copy this category's subcategories"
+                                    aria-label={`Copy subcategories from ${cat.name}`}
+                                    className="rounded px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+                                  >
+                                    <ClipboardCopy className="mr-1 inline h-3.5 w-3.5" />
+                                    Copy
+                                  </button>
+                                  {subcategoryClipboard && (
+                                    <button
+                                      type="button"
+                                      onClick={() => void pasteSubcategories(game, cat)}
+                                      disabled={pastingIntoCategoryId !== null}
+                                      title={`Paste copied subcategories from ${subcategoryClipboard.sourceGameTitle} > ${subcategoryClipboard.sourceCategoryName}`}
+                                      aria-label={`Paste subcategories into ${cat.name}`}
+                                      className="rounded px-2 py-1 text-xs text-[var(--sr-primary)] hover:bg-[var(--sr-surface-2)] disabled:cursor-wait disabled:opacity-50"
+                                    >
+                                      {pastingIntoCategoryId === cat.id ? (
+                                        <Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <ClipboardPaste className="mr-1 inline h-3.5 w-3.5" />
+                                      )}
+                                      Paste
+                                    </button>
+                                  )}
+                                </>
                               )}
                             </div>
                           </li>
