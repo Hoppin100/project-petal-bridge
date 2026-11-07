@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Loader2, Send, Youtube, Clock } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Youtube, Clock, ChevronDown, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import type { Game, Category } from '@/lib/types';
@@ -17,6 +17,7 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [gameId, setGameId] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
   const [hours, setHours] = useState('');
   const [minutes, setMinutes] = useState('');
   const [seconds, setSeconds] = useState('');
@@ -53,18 +54,28 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
   useEffect(() => {
     if (!gameId) return;
     let current = true;
+    setCategories([]);
+    setCategoryId('');
+    setExpandedCategoryId(null);
     (async () => {
       const { data: c, error: categoryError } = await supabase
         .from('categories')
-        .select('id, game_id, name, timing_rules, sort_order, created_at')
+        .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at')
         .eq('game_id', gameId)
         .order('sort_order')
         .order('name');
       if (!current) return;
-      if (categoryError) setLoadError('Categories could not be loaded. Choose the game again.');
+      if (categoryError) {
+        setLoadError('Categories could not be loaded. Choose the game again.');
+        return;
+      }
       const catList = (c as Category[]) ?? [];
+      const firstMainCategory = catList.find((category) => !category.parent_category_id);
       setCategories(catList);
-      setCategoryId(catList[0]?.id ?? '');
+      setCategoryId(firstMainCategory?.id ?? '');
+      if (firstMainCategory && catList.some((category) => category.parent_category_id === firstMainCategory.id)) {
+        setExpandedCategoryId(firstMainCategory.id);
+      }
     })();
     return () => { current = false; };
   }, [gameId]);
@@ -73,6 +84,8 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
   const videoId = parseYouTubeId(videoUrl);
   const startSeconds = parseVideoTimestamp(videoStart);
   const endSeconds = parseVideoTimestamp(videoEnd);
+  const mainCategories = categories.filter((category) => !category.parent_category_id);
+  const selectedCategory = categories.find((category) => category.id === categoryId);
 
   const timeMs = (() => {
     const h = parseInt(hours || '0', 10) || 0;
@@ -223,32 +236,90 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
             </select>
             {validationField === 'game' && error && <p role="alert" className="mt-1 text-xs text-red-400">{error}</p>}
           </div>
-          <div>
-            <label htmlFor="run-category" className="mb-1 block text-sm font-medium text-emerald-100">
-              Category
-            </label>
-            <select
-              id="run-category"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="sr-input"
-              required
-              disabled={!gameId}
-            >
-              <option value="">Select a category...</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <fieldset aria-required="true">
+            <legend className="mb-1 block text-sm font-medium text-emerald-100">Category</legend>
+            {!gameId ? (
+              <p className="text-sm text-[var(--sr-text-muted)]">Choose a game to see its categories.</p>
+            ) : mainCategories.length === 0 ? (
+              <p className="text-sm text-[var(--sr-text-muted)]">This game has no categories available.</p>
+            ) : (
+              <div className="flex flex-col gap-2" role="group" aria-label="Main categories">
+                {mainCategories.map((mainCategory) => {
+                  const subcategories = categories.filter(
+                    (category) => category.parent_category_id === mainCategory.id
+                  );
+                  const isSelected =
+                    selectedCategory?.id === mainCategory.id ||
+                    selectedCategory?.parent_category_id === mainCategory.id;
+                  const isExpanded = expandedCategoryId === mainCategory.id;
+                  return (
+                    <div key={mainCategory.id} className="border border-[var(--sr-border)] bg-[var(--sr-surface)]">
+                      <button
+                        type="button"
+                        aria-expanded={subcategories.length > 0 ? isExpanded : undefined}
+                        onClick={() => {
+                          setCategoryId(mainCategory.id);
+                          if (subcategories.length > 0) {
+                            setExpandedCategoryId((current) =>
+                              current === mainCategory.id ? null : mainCategory.id
+                            );
+                          } else {
+                            setExpandedCategoryId(null);
+                          }
+                        }}
+                        className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
+                          isSelected
+                            ? 'bg-[var(--sr-primary)]/10 text-white'
+                            : 'text-[var(--sr-text-dim)] hover:bg-[var(--sr-surface-2)] hover:text-white'
+                        }`}
+                      >
+                        <span>{mainCategory.name}</span>
+                        {subcategories.length > 0 &&
+                          (isExpanded ? (
+                            <ChevronDown aria-hidden="true" className="h-4 w-4 text-[var(--sr-primary)]" />
+                          ) : (
+                            <ChevronRight aria-hidden="true" className="h-4 w-4 text-[var(--sr-text-muted)]" />
+                          ))}
+                      </button>
+                      {isExpanded && subcategories.length > 0 && (
+                        <div className="border-t border-[var(--sr-border)] p-3">
+                          <label
+                            htmlFor={`run-subcategory-${mainCategory.id}`}
+                            className="mb-1 block text-xs font-medium text-[var(--sr-text-muted)]"
+                          >
+                            Subcategory
+                          </label>
+                          <select
+                            id={`run-subcategory-${mainCategory.id}`}
+                            value={
+                              selectedCategory?.parent_category_id === mainCategory.id
+                                ? selectedCategory.id
+                                : mainCategory.id
+                            }
+                            onChange={(event) => setCategoryId(event.target.value)}
+                            className="sr-input"
+                          >
+                            <option value={mainCategory.id}>Main category — {mainCategory.name}</option>
+                            {subcategories.map((subcategory) => (
+                              <option key={subcategory.id} value={subcategory.id}>
+                                {subcategory.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
         </div>
 
-        {categories.find((c) => c.id === categoryId)?.timing_rules && (
+        {selectedCategory?.timing_rules && (
           <div className="rounded-lg border border-[var(--sr-border)] bg-[var(--sr-surface)] p-3 text-sm text-emerald-100/80">
             <span className="font-semibold text-emerald-50">Timing rules: </span>
-            {categories.find((c) => c.id === categoryId)?.timing_rules}
+            {selectedCategory.timing_rules}
           </div>
         )}
 

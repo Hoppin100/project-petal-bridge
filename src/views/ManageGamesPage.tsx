@@ -58,17 +58,25 @@ export function ManageGamesPage() {
     // Read every game's categories in one pass so each row can show its
     // category count straight away instead of only after being expanded.
     if (gameList.length) {
-      const { data } = await supabase
+      const { data, error: categoriesError } = await supabase
         .from('categories')
         .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at')
         .in('game_id', gameList.map((game) => game.id))
         .order('sort_order')
         .order('name');
+      if (categoriesError) {
+        console.error('load categories failed', categoriesError);
+        setError(`Could not load categories: ${categoriesError.message}`);
+        setLoading(false);
+        return;
+      }
       const grouped: Record<string, Category[]> = {};
       for (const category of (data as Category[]) ?? []) {
         (grouped[category.game_id] ??= []).push(category);
       }
-      setCategoryMap((prev) => ({ ...grouped, ...prev }));
+      setCategoryMap(grouped);
+    } else {
+      setCategoryMap({});
     }
     setLoading(false);
   }, []);
