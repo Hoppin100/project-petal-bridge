@@ -184,20 +184,20 @@ function isAnalysisResult(
   if (!value || typeof value !== "object") return false;
   const result = value as Record<string, unknown>;
   return (
-    (result.recommendation === "likely_consistent" ||
-      result.recommendation === "needs_review" ||
-      result.recommendation === "potential_concern") &&
-    typeof result.confidence === "number" &&
-    Number.isFinite(result.confidence) &&
-    result.confidence >= 0 &&
-    result.confidence <= 1 &&
-    typeof result.summary === "string" &&
-    Array.isArray(result.observations) &&
-    result.observations.every((item) => typeof item === "string") &&
-    Array.isArray(result.concerns) &&
-    result.concerns.every((item) => typeof item === "string") &&
-    Array.isArray(result.speculation) &&
-    result.speculation.every((item) => typeof item === "string")
+    (result["recommendation"] === "likely_consistent" ||
+      result["recommendation"] === "needs_review" ||
+      result["recommendation"] === "potential_concern") &&
+    typeof result["confidence"] === "number" &&
+    Number.isFinite(result["confidence"]) &&
+    (result["confidence"] as number) >= 0 &&
+    (result["confidence"] as number) <= 1 &&
+    typeof result["summary"] === "string" &&
+    Array.isArray(result["observations"]) &&
+    (result["observations"] as unknown[]).every((item) => typeof item === "string") &&
+    Array.isArray(result["concerns"]) &&
+    (result["concerns"] as unknown[]).every((item) => typeof item === "string") &&
+    Array.isArray(result["speculation"]) &&
+    (result["speculation"] as unknown[]).every((item) => typeof item === "string")
   );
 }
 
