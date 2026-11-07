@@ -132,7 +132,7 @@ export function AccountPage() {
   return (
     <div className="sr-container max-w-xl py-8 sm:py-10">
       <header className="mb-6">
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Your profile</p>
+        <p className="sr-eyebrow">Your profile</p>
         <h1 className="text-3xl font-bold text-[var(--sr-text)]">Account settings</h1>
         <p className="mt-1 text-sm text-[var(--sr-text-muted)]">
           Update your username and profile details.
@@ -141,10 +141,11 @@ export function AccountPage() {
 
       <form onSubmit={handleSave} className="sr-panel flex flex-col gap-5 p-4 sm:p-6">
         <div>
-          <label className="mb-1 block text-sm font-medium text-emerald-100">
+          <label htmlFor="account-username" className="mb-1 block text-sm font-medium text-emerald-100">
             Username
           </label>
           <input
+            id="account-username"
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -167,10 +168,11 @@ export function AccountPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-emerald-100">
+          <label htmlFor="account-bio" className="mb-1 block text-sm font-medium text-emerald-100">
             Bio
           </label>
           <textarea
+            id="account-bio"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={3}
@@ -180,10 +182,11 @@ export function AccountPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-emerald-100">
+          <label htmlFor="account-avatar-url" className="mb-1 block text-sm font-medium text-emerald-100">
             Profile picture
           </label>
           <input
+            id="account-avatar-url"
             type="url"
             value={avatarUrl}
             onChange={(e) => setAvatarUrl(e.target.value)}
@@ -203,12 +206,12 @@ export function AccountPage() {
         </div>
 
         {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+          <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
             {error}
           </div>
         )}
         {success && (
-          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+          <div role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
             {success}
           </div>
         )}

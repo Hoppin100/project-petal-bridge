@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import type { Profile } from '@/lib/types';
 import { Avatar } from '@/components/Avatar';
 import { linkHref } from '@/lib/router';
+import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 
 export function MembersPage() {
   const { session, profile, loading: authLoading, refreshProfile } = useAuth();
@@ -14,6 +15,10 @@ export function MembersPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [pendingRoleChange, setPendingRoleChange] = useState<{
+    member: Profile;
+    role: 'owner' | 'member';
+  } | null>(null);
 
   async function load() {
     setLoading(true);
@@ -38,20 +43,31 @@ export function MembersPage() {
     return q ? members.filter((member) => member.username.toLowerCase().includes(q)) : members;
   }, [members, query]);
 
-  async function changeRole(member: Profile, role: 'owner' | 'member') {
-    const action = role === 'owner' ? `Make ${member.username} an owner?` : `Remove owner access from ${member.username}?`;
-    if (!confirm(action)) return;
+  function changeRole(member: Profile, role: 'owner' | 'member') {
+    setPendingRoleChange({ member, role });
+  }
+
+  async function confirmRoleChange() {
+    if (!pendingRoleChange) return;
+    const { member, role } = pendingRoleChange;
+    setPendingRoleChange(null);
     setBusyId(member.id);
     setError('');
     setNotice('');
-    const { error: roleError } = await supabase.rpc('set_member_role', { p_member: member.id, p_role: role });
-    setBusyId(null);
-    if (roleError) {
-      setError(roleError.message.includes('own owner') ? 'You cannot remove your own owner access.' : roleError.message.includes('At least one') ? 'SplitRush needs at least one owner.' : 'That role could not be changed.');
-      return;
+    try {
+      const { error: roleError } = await supabase.rpc('set_member_role', { p_member: member.id, p_role: role });
+      if (roleError) {
+        setError(roleError.message.includes('own owner') ? 'You cannot remove your own owner access.' : roleError.message.includes('At least one') ? 'SplitRush needs at least one owner.' : 'That role could not be changed.');
+        return;
+      }
+      setNotice(role === 'owner' ? `${member.username} is now an owner.` : `${member.username} is now a member.`);
+      await Promise.all([load(), refreshProfile()]);
+    } catch (cause) {
+      console.error('member role update failed', cause);
+      setError('That role could not be changed. Please try again.');
+    } finally {
+      setBusyId(null);
     }
-    setNotice(role === 'owner' ? `${member.username} is now an owner.` : `${member.username} is now a member.`);
-    await Promise.all([load(), refreshProfile()]);
   }
 
   if (authLoading) return <div className="sr-container py-20 text-center text-[var(--sr-text-muted)]">Loading…</div>;
@@ -60,7 +76,7 @@ export function MembersPage() {
 
   return <div className="sr-container max-w-5xl py-8 sm:py-10">
     <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-      <div><p className="text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Owner tools</p><h1 className="mt-1 flex items-center gap-2 text-3xl font-bold"><Users className="h-7 w-7" />Members</h1><p className="mt-1 text-sm text-[var(--sr-text-muted)]">Promote trusted members or remove owner access.</p></div>
+      <div><p className="sr-eyebrow">Owner tools</p><h1 className="mt-1 flex items-center gap-2 text-3xl font-bold"><Users className="h-7 w-7" />Members</h1><p className="mt-1 text-sm text-[var(--sr-text-muted)]">Promote trusted members or remove owner access.</p></div>
       <div className="relative w-full sm:w-72"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sr-text-muted)]" /><input className="sr-input pl-9" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Find a member" aria-label="Find a member" /></div>
     </div>
     {error && <p role="alert" className="mb-4 border-l-2 border-red-400 px-3 py-2 text-sm text-red-300">{error} <button className="sr-link ml-2" onClick={() => void load()}>Retry</button></p>}
@@ -72,5 +88,18 @@ export function MembersPage() {
         {member.role === 'owner' ? <button disabled={busyId !== null || member.id === profile.id} onClick={() => void changeRole(member, 'member')} className="sr-btn-ghost">{busyId === member.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserMinus className="h-4 w-4" />}Make member</button> : <button disabled={busyId !== null} onClick={() => void changeRole(member, 'owner')} className="sr-btn-primary">{busyId === member.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}Make owner</button>}
       </div>)}
     </div>}
+    <ConfirmationDialog
+      open={pendingRoleChange !== null}
+      onOpenChange={(open) => { if (!open) setPendingRoleChange(null); }}
+      title={pendingRoleChange?.role === 'owner' ? 'Promote this member?' : pendingRoleChange ? 'Remove owner access?' : 'Change member role?'}
+      description={pendingRoleChange?.role === 'owner'
+        ? `${pendingRoleChange.member.username} will be able to manage games, members, and run reviews.`
+        : pendingRoleChange
+          ? `${pendingRoleChange.member.username} will lose owner permissions and become a member.`
+          : ''}
+      confirmLabel={pendingRoleChange?.role === 'owner' ? 'Make owner' : pendingRoleChange ? 'Make member' : 'Confirm'}
+      destructive={pendingRoleChange?.role === 'member'}
+      onConfirm={() => { void confirmRoleChange(); }}
+    />
   </div>;
 }

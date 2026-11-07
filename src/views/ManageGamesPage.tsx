@@ -21,6 +21,14 @@ import { lookupSpeedrunGames } from '@/lib/speedrun-games.functions';
 import { useAuth } from '@/lib/auth';
 import type { Game, Category, GameRequest } from '@/lib/types';
 import { linkHref } from '@/lib/router';
+import { ConfirmationDialog } from '@/components/ConfirmationDialog';
+
+interface PendingConfirmation {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+}
 
 export function ManageGamesPage() {
   const { session, profile, loading: authLoading } = useAuth();
@@ -33,6 +41,7 @@ export function ManageGamesPage() {
   const [reorderingGameId, setReorderingGameId] = useState<string | null>(null);
   const [showCatModal, setShowCatModal] = useState<{ gameId: string; cat: Category | null; parentCategoryId: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(null);
   const [requests, setRequests] = useState<GameRequest[]>([]);
   const [subcategoryClipboard, setSubcategoryClipboard] = useState<{
     sourceGameTitle: string;
@@ -137,7 +146,15 @@ export function ManageGamesPage() {
   }
 
   async function handleDeleteGame(game: Game) {
-    if (!confirm(`Delete "${game.title}" and all its categories and runs? This cannot be undone.`)) return;
+    setConfirmation({
+      title: `Delete ${game.title}?`,
+      description: 'This will permanently delete the game, its categories, and associated runs. This cannot be undone.',
+      confirmLabel: 'Delete game',
+      onConfirm: () => { void deleteGame(game); },
+    });
+  }
+
+  async function deleteGame(game: Game) {
     setError(null);
     const { error: delErr } = await supabase.from('games').delete().eq('id', game.id);
     if (delErr) {
@@ -167,7 +184,15 @@ export function ManageGamesPage() {
     const categoryLabel = cat.parent_category_id
       ? `subcategory "${cat.name}" under "${parentName ?? 'unknown category'}"`
       : `category "${cat.name}"`;
-    if (!confirm(`Delete ${categoryLabel} and all its runs? This cannot be undone.`)) return;
+    setConfirmation({
+      title: `Delete ${cat.parent_category_id ? 'subcategory' : 'category'}?`,
+      description: `This will permanently delete ${categoryLabel} and all associated runs. This cannot be undone.`,
+      confirmLabel: 'Delete category',
+      onConfirm: () => { void deleteCategory(cat, gameId); },
+    });
+  }
+
+  async function deleteCategory(cat: Category, gameId: string) {
     setError(null);
     const { error: delErr } = await supabase.from('categories').delete().eq('id', cat.id);
     if (delErr) {
@@ -360,7 +385,7 @@ export function ManageGamesPage() {
     <div className="sr-container py-8 sm:py-10">
       <div className="mb-6 flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Owner tools</p>
+          <p className="sr-eyebrow">Owner tools</p>
           <h1 className="flex items-center gap-2 text-3xl font-bold text-[var(--sr-text)]">
             <Gamepad2 className="h-7 w-7 text-[var(--sr-primary)]" />
             Manage Games
@@ -707,6 +732,17 @@ export function ManageGamesPage() {
             if (!keepAdding) setShowCatModal(null);
             await loadCategories(gid);
           }}
+        />
+      )}
+      {confirmation && (
+        <ConfirmationDialog
+          open
+          onOpenChange={(open) => { if (!open) setConfirmation(null); }}
+          title={confirmation.title}
+          description={confirmation.description}
+          confirmLabel={confirmation.confirmLabel}
+          destructive
+          onConfirm={confirmation.onConfirm}
         />
       )}
     </div>
@@ -1253,6 +1289,12 @@ function CategoryModal({
         typeof cause.message === 'string'
           ? cause.message
           : '';
+      if (detail.includes('categories_game_id_name_key')) {
+        setError(
+          'The database still blocks duplicate category names. Apply drizzle/migrations/0006_allow_duplicate_subcategories.sql to the project database, then try again.'
+        );
+        return;
+      }
       setError(detail ? `Could not save category: ${detail}` : 'Could not save category.');
     } finally {
       setSaving(false);

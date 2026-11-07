@@ -5,6 +5,7 @@ import { SearchBar } from '@/components/SearchBar';
 import { useAuth } from '@/lib/auth';
 import { linkHref } from '@/lib/router';
 import { Avatar } from '@/components/Avatar';
+import { useRouterState } from '@tanstack/react-router';
 
 interface NavbarProps {
   onOpenAuth: (mode: 'signin' | 'signup') => void;
@@ -13,6 +14,8 @@ interface NavbarProps {
 
 export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
   const { profile, signOut } = useAuth();
+  const { location } = useRouterState();
+  const pathname = location.pathname;
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navLinks = [
@@ -31,7 +34,7 @@ export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
         {!launchLocked && (
           <nav aria-label="Main navigation" className="hidden items-center gap-5 md:flex">
             {navLinks.map((l) => (
-              <a key={l.to} href={linkHref(l.to)} className="sr-nav-link">
+              <a key={l.to} href={linkHref(l.to)} className="sr-nav-link" aria-current={pathname === l.to || (l.to === '/games' && pathname.startsWith('/games/')) ? 'page' : undefined}>
                 {l.label}
               </a>
             ))}
@@ -112,7 +115,7 @@ export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
           <button
             className="rounded-sm p-2 text-[var(--sr-text-dim)] hover:bg-[var(--sr-surface-2)] hover:text-[var(--sr-text)] md:hidden"
             onClick={() => setMobileOpen((o) => !o)}
-            aria-label="Toggle menu"
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
             aria-controls="mobile-navigation"
           >
@@ -133,6 +136,7 @@ export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
                     href={linkHref(l.to)}
                     onClick={() => setMobileOpen(false)}
                     className="sr-nav-link py-2"
+                    aria-current={pathname === l.to || (l.to === '/games' && pathname.startsWith('/games/')) ? 'page' : undefined}
                   >
                     {l.label}
                   </a>

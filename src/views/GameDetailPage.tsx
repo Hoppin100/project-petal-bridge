@@ -7,6 +7,7 @@ import { Leaderboard } from '@/components/Leaderboard';
 import { linkHref } from '@/lib/router';
 import { formatTime } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
+import { isComingSoonGame } from '@/lib/games';
 
 interface GameDetailPageProps {
   slug: string;
@@ -189,6 +190,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
     (category) => category.parent_category_id === expandedCategoryId
   );
   const worldRecord = runs[0]; // sorted ascending
+  const comingSoon = isComingSoonGame(game);
 
   return (
     <div className="sr-container pb-12">
@@ -216,10 +218,15 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
               ) : <Gamepad2 className="h-7 w-7" />}
             </div>
             <div className="min-w-0 flex-1">
-              {game.is_featured && <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Featured leaderboard</p>}
+              {game.is_featured && <p className="sr-eyebrow">Featured leaderboard</p>}
               <h1 className="text-2xl font-bold sm:text-4xl">
                 {game.title}
               </h1>
+              {comingSoon && (
+                <p className="mt-2 inline-flex rounded-sm bg-amber-400 px-2 py-1 text-xs font-bold uppercase tracking-wide text-black">
+                  Coming soon
+                </p>
+              )}
               {game.blurb && (
                 <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--sr-text-dim)]">
                   {game.blurb}
@@ -266,7 +273,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
           </div>
         ) : (
           <>
-            <div className="flex gap-1 overflow-x-auto border-b border-[var(--sr-border)]" role="tablist" aria-label="Leaderboard category">
+            <div className="flex gap-1 overflow-x-auto border-b border-[var(--sr-border)]" role="group" aria-label="Leaderboard category">
               {mainCategories.map((category) => {
                 const hasSubcategories = categories.some((item) => item.parent_category_id === category.id);
                 const isActive = activeMainCategory?.id === category.id;
@@ -274,9 +281,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
                 return (
                 <button
                   key={category.id}
-                  role="tab"
-                  aria-selected={isActive}
-                  aria-controls={hasSubcategories ? `subcategories-${category.id}` : undefined}
+                  aria-pressed={isActive}
                   onClick={() => {
                     setActiveCat(category.id);
                     setExpandedCategoryId((current) =>
@@ -339,6 +344,10 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
               </div>
             )}
 
+            <div className="mb-3 mt-5 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-lg font-bold">Leaderboard</h2>
+              {activeCategory && <p className="text-sm text-[var(--sr-text-muted)]">{activeCategory.name}</p>}
+            </div>
             <Leaderboard runs={runs} runnerMap={runnerMap} />
           </>
         )}

@@ -80,7 +80,7 @@ export function HomePage() {
     <div className="sr-container grid gap-4 py-5 lg:grid-cols-[minmax(0,1fr)_400px]">
       <section className="sr-panel flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 lg:col-span-2">
         <div className="max-w-2xl">
-          <p className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--sr-primary)]">
+          <p className="sr-eyebrow flex items-center gap-2">
             <Trophy aria-hidden="true" className="h-4 w-4" />
             Community leaderboards
           </p>
@@ -102,7 +102,7 @@ export function HomePage() {
 
       {featuredGames.length > 0 && <section className="sr-panel min-w-0">
         <h2 className="sr-panel-title">Featured games <a href={linkHref('/games')} className="text-xs font-semibold normal-case text-[var(--sr-link)] hover:underline">See all</a></h2>
-        <div className="grid grid-cols-3 gap-3 px-4 pb-4">{featuredGames.slice(0, 6).map((game) => <GameCard key={game.id} game={game} />)}</div>
+        <div className="grid grid-cols-2 gap-3 px-4 pb-4 sm:grid-cols-3">{featuredGames.slice(0, 6).map((game) => <GameCard key={game.id} game={game} />)}</div>
       </section>}
 
       <aside className="min-w-0 space-y-4">

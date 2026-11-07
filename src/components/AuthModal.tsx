@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, Check } from 'lucide-react';
+import { Loader2, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 
 interface AuthModalProps {
   mode: 'signin' | 'signup';
@@ -222,44 +223,30 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
   })();
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-      onClick={onClose}
-      onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}
-    >
-      <div
-        className="sr-panel w-full max-w-md p-5 shadow-2xl sr-fade-in sm:p-6"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="auth-title"
-        tabIndex={-1}
-      >
-        <div className="mb-4 flex items-center justify-between">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sr-panel w-[calc(100%-2rem)] max-w-md gap-4 p-5 shadow-2xl sm:p-6">
+        <div className="mb-4 flex items-center justify-between pr-8">
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">
+            <p className="sr-eyebrow">
               SplitRush account
             </p>
-            <h2 id="auth-title" className="text-xl font-bold text-[var(--sr-text)]">
+            <DialogTitle id="auth-title" className="text-xl font-bold text-[var(--sr-text)]">
               {mode === 'signup' ? 'Create your account' : 'Welcome back'}
-            </h2>
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              {mode === 'signup' ? 'Create a SplitRush account.' : 'Sign in to your SplitRush account.'}
+            </DialogDescription>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-sm p-2 text-[var(--sr-text-muted)] transition-colors hover:bg-[var(--sr-surface-2)] hover:text-[var(--sr-text)]"
-            aria-label="Close dialog"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {mode === 'signup' && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-emerald-100">
+              <label htmlFor="auth-username" className="mb-1 block text-sm font-medium text-emerald-100">
                 Username
               </label>
               <input
+                id="auth-username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -287,10 +274,11 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
           )}
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-emerald-100">
+            <label htmlFor="auth-email" className="mb-1 block text-sm font-medium text-emerald-100">
               Email
             </label>
             <input
+              id="auth-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -302,10 +290,11 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-emerald-100">
+            <label htmlFor="auth-password" className="mb-1 block text-sm font-medium text-emerald-100">
               Password
             </label>
             <input
+              id="auth-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -317,13 +306,13 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
           </div>
 
           {notice && (
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+            <div role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
               {notice}
             </div>
           )}
 
           {error && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
               {error}
             </div>
           )}
@@ -361,7 +350,7 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
             </>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

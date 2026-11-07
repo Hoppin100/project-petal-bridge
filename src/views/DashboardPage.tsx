@@ -31,6 +31,7 @@ import type {
 } from '@/lib/types';
 import { formatTime, timeAgo, parseYouTubeId, youtubeEmbedUrl } from '@/lib/format';
 import { linkHref } from '@/lib/router';
+import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 
 export function DashboardPage() {
   const { profile, session, loading: authLoading } = useAuth();
@@ -44,6 +45,8 @@ export function DashboardPage() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [pendingDeleteRunId, setPendingDeleteRunId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [feedbackNote, setFeedbackNote] = useState('');
   const [tab, setTab] = useState<'pending' | 'history'>('pending');
@@ -186,6 +189,7 @@ export function DashboardPage() {
   }, [selectedRunId]);
 
   async function handleVerify(runId: string) {
+    setActionError('');
     setActionLoading(true);
     try {
       const { error } = await supabase.rpc('verify_run', { p_run: runId });
@@ -193,7 +197,7 @@ export function DashboardPage() {
       await loadData();
     } catch (e) {
       console.error('verify failed', e);
-      alert('Could not verify run. You may not have owner permissions.');
+      setActionError('Could not verify run. You may not have owner permissions.');
     } finally {
       setActionLoading(false);
     }
@@ -201,9 +205,10 @@ export function DashboardPage() {
 
   async function handleReject(runId: string) {
     if (!rejectReason.trim()) {
-      alert('Please provide a rejection reason.');
+      setActionError('Please provide a rejection reason.');
       return;
     }
+    setActionError('');
     setActionLoading(true);
     try {
       const { error } = await supabase.rpc('reject_run', {
@@ -215,14 +220,21 @@ export function DashboardPage() {
       await loadData();
     } catch (e) {
       console.error('reject failed', e);
-      alert('Could not reject run.');
+      setActionError('Could not reject run.');
     } finally {
       setActionLoading(false);
     }
   }
 
-  async function handleDeleteRun(runId: string) {
-    if (!confirm('Permanently delete this run and its review history? This cannot be undone.')) return;
+  function handleDeleteRun(runId: string) {
+    setPendingDeleteRunId(runId);
+  }
+
+  async function confirmDeleteRun() {
+    if (!pendingDeleteRunId) return;
+    const runId = pendingDeleteRunId;
+    setPendingDeleteRunId(null);
+    setActionError('');
     setActionLoading(true);
     try {
       const { error } = await supabase.rpc('delete_run', { p_run: runId });
@@ -231,13 +243,14 @@ export function DashboardPage() {
       await loadData();
     } catch (e) {
       console.error('delete run failed', e);
-      alert('Could not delete run. Make sure the database migration has been applied.');
+      setActionError('Could not delete run. Make sure the database migration has been applied.');
     } finally {
       setActionLoading(false);
     }
   }
 
   async function handleToggleReference(run: Run, currentLabel?: 'verified' | 'rejected') {
+    setActionError('');
     setActionLoading(true);
     try {
       if (currentLabel) {
@@ -264,20 +277,21 @@ export function DashboardPage() {
       await loadData();
     } catch (e) {
       console.error('ref toggle failed', e);
-      alert('Could not update reference example.');
+      setActionError('Could not update reference example.');
     } finally {
       setActionLoading(false);
     }
   }
 
   async function handleRegenerate(runId: string) {
+    setActionError('');
     setActionLoading(true);
     try {
       await runVerification({ data: { runId } });
       await loadData();
     } catch (e) {
       console.error('regenerate failed', e);
-      alert('AI assessment service unavailable. Run remains pending for manual review.');
+      setActionError('AI assessment service unavailable. Run remains pending for manual review.');
     } finally {
       setActionLoading(false);
     }
@@ -320,7 +334,7 @@ export function DashboardPage() {
   return (
     <div className="sr-container py-8 sm:py-10">
       <div className="mb-6">
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Owner tools</p>
+        <p className="sr-eyebrow">Owner tools</p>
         <h1 className="flex items-center gap-2 text-3xl font-bold text-[var(--sr-text)]">
           <ShieldCheck className="h-7 w-7 text-[var(--sr-primary)]" />
           Verification Dashboard
@@ -329,6 +343,8 @@ export function DashboardPage() {
           Review submissions with the SplitRush Verification Assistant.
         </p>
       </div>
+
+      {actionError && <p role="alert" className="mb-4 border-l-2 border-red-400 px-3 py-2 text-sm text-red-300">{actionError}</p>}
 
       {/* Stats */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
@@ -440,11 +456,22 @@ export function DashboardPage() {
               onReject={() => handleReject(selectedRun.id)}
               onDelete={() => handleDeleteRun(selectedRun.id)}
               onRegenerate={() => handleRegenerate(selectedRun.id)}
-              onToggleRef={() => handleToggleReference(selectedRun, refMap[selectedRun.id]?.label)}
+              onToggleRef={() => {
+                if (selectedRun) void handleToggleReference(selectedRun, refMap[selectedRun.id]?.label);
+              }}
             />
           )}
         </div>
       </div>
+      <ConfirmationDialog
+        open={pendingDeleteRunId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteRunId(null); }}
+        title="Delete this run?"
+        description="This permanently deletes the run and its review history. This cannot be undone."
+        confirmLabel="Delete run"
+        destructive
+        onConfirm={() => { void confirmDeleteRun(); }}
+      />
     </div>
   );
 }

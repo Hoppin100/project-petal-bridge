@@ -9,6 +9,11 @@ const CORE_GAME_COLUMNS = 'id, slug, title, cover_url, blurb, is_featured, creat
 
 type GameQueryResult = { games: Game[]; error: string | null };
 
+export function isComingSoonGame(game: Pick<Game, 'title'>): boolean {
+  const title = game.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return /\bgta\s*(?:6|vi)\b|\bgrand theft auto\s*(?:6|vi)\b/.test(title);
+}
+
 function isMissingOptionalColumn(error: { code?: string; message: string }) {
   return (
     (error.code === '42703' || error.code === 'PGRST204') &&

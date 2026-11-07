@@ -52,7 +52,7 @@ export function GamesPage() {
     <div className="sr-container py-8">
       <div className="mb-6 flex flex-col gap-4 border-b border-[var(--sr-border)] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Game library</p>
+          <p className="sr-eyebrow">Game library</p>
           <h1 className="text-3xl font-bold">Browse games</h1>
           <p className="mt-1 text-sm text-[var(--sr-text-muted)]" aria-live="polite">
             {query.trim()

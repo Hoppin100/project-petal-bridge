@@ -192,7 +192,7 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
       </a>
 
       <header className="mb-6">
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[.15em] text-[var(--sr-primary)]">Run submission</p>
+        <p className="sr-eyebrow">Run submission</p>
         <h1 className="text-3xl font-bold">Submit a run</h1>
         <p className="mt-1 max-w-xl text-sm leading-6 text-[var(--sr-text-muted)]">
           Provide your completion time and a YouTube link as proof. Owners will
@@ -337,10 +337,11 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-emerald-100">
+          <label htmlFor="run-notes" className="mb-1 block text-sm font-medium text-emerald-100">
             Notes (optional)
           </label>
           <textarea
+            id="run-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Any details about your run..."

@@ -88,7 +88,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "SplitRush — Speedrun Leaderboards" },
       { name: "description", content: "Track speedrun times, compare runs, and climb the SplitRush leaderboards." },
-      { name: "theme-color", content: "#07110f" },
+      { name: "theme-color", content: "#111712" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -102,7 +102,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&family=Space+Grotesk:wght@500;600;700&display=swap",
       },
     ],
   }),
@@ -180,8 +180,9 @@ function AppShell() {
   return (
     <AuthModalContext.Provider value={openAuth}>
       <div className="flex min-h-screen flex-col">
+        <a className="sr-skip-link" href="#main-content">Skip to content</a>
         <Navbar onOpenAuth={openAuth} launchLocked={launchLocked} />
-        <main className="flex-1">
+        <main id="main-content" className="flex-1" tabIndex={-1}>
           {siteReady ? (
             launchLocked ? (
               <LaunchCountdown
