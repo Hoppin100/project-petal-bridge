@@ -98,12 +98,21 @@ describe("Run submission sign-in prompt", () => {
         created_at: "",
       },
       {
+        id: "subcategory-1",
+        game_id: "game-id",
+        parent_category_id: "main-1",
+        name: "Any%",
+        timing_rules: null,
+        sort_order: 2,
+        created_at: "",
+      },
+      {
         id: "main-4",
         game_id: "game-id",
         parent_category_id: null,
         name: "Player 4",
         timing_rules: null,
-        sort_order: 2,
+        sort_order: 3,
         created_at: "",
       },
       {
@@ -112,7 +121,7 @@ describe("Run submission sign-in prompt", () => {
         parent_category_id: "main-4",
         name: "Glitchless",
         timing_rules: "Player 4 rules",
-        sort_order: 3,
+        sort_order: 4,
         created_at: "",
       },
     ];
@@ -125,10 +134,17 @@ describe("Run submission sign-in prompt", () => {
     fireEvent.click(playerFourButton);
     const subcategorySelect = await screen.findByLabelText("Subcategory");
     expect(subcategorySelect).toBeInTheDocument();
+    expect(subcategorySelect).toBeRequired();
+    expect(Array.from(subcategorySelect.querySelectorAll("option")).map((option) => option.value)).toEqual([
+      "",
+      "subcategory-4",
+    ]);
     expect(playerFourButton).toHaveAttribute("aria-expanded", "true");
 
     fireEvent.change(subcategorySelect, { target: { value: "subcategory-4" } });
     expect(subcategorySelect).toHaveValue("subcategory-4");
     expect(screen.getByText("Player 4 rules")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Run starts in video/)).toBeRequired();
+    expect(screen.getByLabelText(/Run ends in video/)).toBeRequired();
   });
 });

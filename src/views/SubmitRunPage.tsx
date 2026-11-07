@@ -28,7 +28,7 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
   const [videoEnd, setVideoEnd] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [validationField, setValidationField] = useState<'game' | 'time' | 'video' | 'markers' | null>(null);
+  const [validationField, setValidationField] = useState<'game' | 'category' | 'time' | 'video' | 'markers' | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -72,8 +72,11 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
       const catList = (c as Category[]) ?? [];
       const firstMainCategory = catList.find((category) => !category.parent_category_id);
       setCategories(catList);
-      setCategoryId(firstMainCategory?.id ?? '');
-      if (firstMainCategory && catList.some((category) => category.parent_category_id === firstMainCategory.id)) {
+      const firstMainHasSubcategories = firstMainCategory
+        ? catList.some((category) => category.parent_category_id === firstMainCategory.id)
+        : false;
+      setCategoryId(firstMainCategory && !firstMainHasSubcategories ? firstMainCategory.id : '');
+      if (firstMainCategory && firstMainHasSubcategories) {
         setExpandedCategoryId(firstMainCategory.id);
       }
     })();
@@ -105,9 +108,18 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
       onRequireAuth();
       return;
     }
-    if (!gameId || !categoryId) {
+    if (!gameId) {
       setValidationField('game');
-      setError('Please select a game and category.');
+      setError('Please select a game.');
+      return;
+    }
+    if (
+      !categoryId ||
+      (!selectedCategory?.parent_category_id &&
+        categories.some((category) => category.parent_category_id === selectedCategory?.id))
+    ) {
+      setValidationField('category');
+      setError('Please select a subcategory for the chosen main category.');
       return;
     }
     if (timeMs <= 0) {
@@ -125,7 +137,12 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
       setError('Please provide a valid YouTube URL as video proof.');
       return;
     }
-    if ((videoStart.trim() && startSeconds === null) || (videoEnd.trim() && endSeconds === null)) {
+    if (!videoStart.trim() || !videoEnd.trim()) {
+      setValidationField('markers');
+      setError('Enter both the run start and run end video markers.');
+      return;
+    }
+    if (startSeconds === null || endSeconds === null) {
       setValidationField('markers');
       setError('Enter video markers as mm:ss or hh:mm:ss.');
       return;
@@ -258,14 +275,20 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
                         type="button"
                         aria-expanded={subcategories.length > 0 ? isExpanded : undefined}
                         onClick={() => {
-                          setCategoryId(mainCategory.id);
-                          if (subcategories.length > 0) {
-                            setExpandedCategoryId((current) =>
-                              current === mainCategory.id ? null : mainCategory.id
-                            );
-                          } else {
-                            setExpandedCategoryId(null);
-                          }
+                            if (subcategories.length > 0) {
+                              if (
+                                expandedCategoryId !== mainCategory.id ||
+                                selectedCategory?.parent_category_id !== mainCategory.id
+                              ) {
+                                setCategoryId('');
+                              }
+                              setExpandedCategoryId((current) =>
+                                current === mainCategory.id ? null : mainCategory.id
+                              );
+                            } else {
+                              setCategoryId(mainCategory.id);
+                              setExpandedCategoryId(null);
+                            }
                         }}
                         className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
                           isSelected
@@ -294,12 +317,13 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
                             value={
                               selectedCategory?.parent_category_id === mainCategory.id
                                 ? selectedCategory.id
-                                : mainCategory.id
+                                : ''
                             }
                             onChange={(event) => setCategoryId(event.target.value)}
                             className="sr-input"
+                            required
                           >
-                            <option value={mainCategory.id}>Main category — {mainCategory.name}</option>
+                            <option value="">Select a subcategory...</option>
                             {subcategories.map((subcategory) => (
                               <option key={subcategory.id} value={subcategory.id}>
                                 {subcategory.name}
@@ -312,6 +336,9 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
                   );
                 })}
               </div>
+            )}
+            {validationField === 'category' && error && (
+              <p role="alert" className="mt-1 text-xs text-red-400">{error}</p>
             )}
           </fieldset>
         </div>
@@ -396,14 +423,14 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block text-sm font-medium text-emerald-100">
-            Run starts in video <span className="text-emerald-700">(optional)</span>
-            <input type="text" inputMode="numeric" value={videoStart} onChange={(e) => setVideoStart(e.target.value)} placeholder="e.g. 1:24 or 00:01:24" className="sr-input mt-1" />
+            Run starts in video <span className="text-[var(--sr-primary)]">Required</span>
+            <input type="text" inputMode="numeric" value={videoStart} onChange={(e) => setVideoStart(e.target.value)} placeholder="e.g. 1:24 or 00:01:24" className="sr-input mt-1" required />
           </label>
           <label className="block text-sm font-medium text-emerald-100">
-            Run ends in video <span className="text-emerald-700">(optional)</span>
-            <input type="text" inputMode="numeric" value={videoEnd} onChange={(e) => setVideoEnd(e.target.value)} placeholder="e.g. 3:52 or 00:03:52" className="sr-input mt-1" />
+            Run ends in video <span className="text-[var(--sr-primary)]">Required</span>
+            <input type="text" inputMode="numeric" value={videoEnd} onChange={(e) => setVideoEnd(e.target.value)} placeholder="e.g. 3:52 or 00:03:52" className="sr-input mt-1" required />
           </label>
-          <p className="text-xs leading-5 text-emerald-700 sm:col-span-2">These markers help reviewers jump to the start and finish during manual review.</p>
+          <p className="text-xs leading-5 text-emerald-700 sm:col-span-2">Both markers are required. Enter them as mm:ss or hh:mm:ss to help reviewers jump to the start and finish.</p>
           {validationField === 'markers' && error && <p role="alert" className="text-xs text-red-400 sm:col-span-2">{error}</p>}
         </div>
 

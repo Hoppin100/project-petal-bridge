@@ -729,6 +729,7 @@ export function ManageGamesPage() {
 
       {showCatModal && (
         <CategoryModal
+          key={`${showCatModal.gameId}:${showCatModal.cat?.id ?? 'new'}:${showCatModal.parentCategoryId ?? 'main'}`}
           gameId={showCatModal.gameId}
           category={showCatModal.cat}
           existingCategories={categoryMap[showCatModal.gameId] ?? []}
