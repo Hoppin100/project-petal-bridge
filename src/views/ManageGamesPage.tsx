@@ -30,6 +30,37 @@ interface PendingConfirmation {
   onConfirm: () => void;
 }
 
+function compareCategories(left: Category, right: Category) {
+  return left.sort_order - right.sort_order || left.name.localeCompare(right.name);
+}
+
+function orderCategories(categories: Category[]) {
+  const mainCategories = categories
+    .filter((category) => !category.parent_category_id)
+    .sort(compareCategories);
+  const ordered: Category[] = [];
+
+  for (const mainCategory of mainCategories) {
+    ordered.push(mainCategory);
+    ordered.push(
+      ...categories
+        .filter((category) => category.parent_category_id === mainCategory.id)
+        .sort(compareCategories)
+    );
+  }
+
+  ordered.push(
+    ...categories
+      .filter(
+        (category) =>
+          category.parent_category_id &&
+          !mainCategories.some((mainCategory) => mainCategory.id === category.parent_category_id)
+      )
+      .sort(compareCategories)
+  );
+  return ordered;
+}
+
 export function ManageGamesPage() {
   const { session, profile, loading: authLoading } = useAuth();
   const [games, setGames] = useState<Game[]>([]);
@@ -39,7 +70,13 @@ export function ManageGamesPage() {
   const [editingGame, setEditingGame] = useState<Game | null>(null);
   const [expandedGameId, setExpandedGameId] = useState<string | null>(null);
   const [reorderingGameId, setReorderingGameId] = useState<string | null>(null);
-  const [showCatModal, setShowCatModal] = useState<{ gameId: string; cat: Category | null; parentCategoryId: string | null } | null>(null);
+  const [showCatModal, setShowCatModal] = useState<{
+    gameId: string;
+    cat: Category | null;
+    parentCategoryId: string | null;
+    initialName?: string;
+    initialTimingRules?: string | null;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(null);
   const [requests, setRequests] = useState<GameRequest[]>([]);
@@ -74,6 +111,9 @@ export function ManageGamesPage() {
       for (const category of (data as Category[]) ?? []) {
         (grouped[category.game_id] ??= []).push(category);
       }
+      for (const gameId of Object.keys(grouped)) {
+        grouped[gameId] = orderCategories(grouped[gameId]!);
+      }
       setCategoryMap(grouped);
     } else {
       setCategoryMap({});
@@ -93,7 +133,7 @@ export function ManageGamesPage() {
       setError(`Could not load categories: ${categoriesError.message}`);
       return;
     }
-    setCategoryMap((prev) => ({ ...prev, [gameId]: (data as Category[]) ?? [] }));
+    setCategoryMap((prev) => ({ ...prev, [gameId]: orderCategories((data as Category[]) ?? []) }));
   }, []);
 
   const loadRequests = useCallback(async () => {
@@ -211,7 +251,7 @@ export function ManageGamesPage() {
     await loadCategories(gameId);
   }
 
-  async function duplicateSubcategory(category: Category, gameId: string) {
+  function duplicateSubcategory(category: Category, gameId: string) {
     const categories = categoryMap[gameId] ?? [];
     const existingNames = new Set(categories.map((item) => item.name.toLowerCase()));
     let copyName = `${category.name} (Copy)`;
@@ -223,30 +263,14 @@ export function ManageGamesPage() {
 
     setError(null);
     setCategoryClipboardNotice(null);
-    const { data: duplicatedCategory, error: duplicateError } = await supabase
-      .from('categories')
-      .insert({
-        game_id: gameId,
-        parent_category_id: category.parent_category_id,
-        name: copyName,
-        timing_rules: category.timing_rules,
-        sort_order: Math.max(0, ...categories.map((item) => item.sort_order)) + 10,
-      })
-      .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at')
-      .single();
-    if (duplicateError) {
-      console.error('duplicate subcategory failed', duplicateError);
-      setError(`Could not duplicate subcategory: ${duplicateError.message}`);
-      return;
-    }
-
-    await loadCategories(gameId);
     setShowCatModal({
       gameId,
-      cat: duplicatedCategory as Category,
+      cat: null,
       parentCategoryId: category.parent_category_id,
+      initialName: copyName,
+      initialTimingRules: category.timing_rules,
     });
-    setCategoryClipboardNotice(`Created "${copyName}" under the same main category.`);
+    setCategoryClipboardNotice(`Choose a destination category and save to create "${copyName}".`);
   }
 
   function copySubcategories(game: Game, parent: Category) {
@@ -300,7 +324,12 @@ export function ManageGamesPage() {
       if (loadError) throw loadError;
 
       const currentCategories = (existingCategories as Category[]) ?? [];
-      const lastSortOrder = Math.max(0, ...currentCategories.map((category) => category.sort_order));
+      const lastSortOrder = Math.max(
+        0,
+        ...currentCategories
+          .filter((category) => category.parent_category_id === parent.id)
+          .map((category) => category.sort_order)
+      );
       const rows = subcategoryClipboard.categories.map((category, index) => ({
         game_id: game.id,
         parent_category_id: parent.id,
@@ -313,9 +342,22 @@ export function ManageGamesPage() {
         .insert(rows)
         .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at');
       if (insertError) throw insertError;
+      const inserted = (insertedCategories as Category[]) ?? [];
+      if (
+        inserted.length !== rows.length ||
+        inserted.some(
+          (category) =>
+            category.game_id !== game.id ||
+            category.parent_category_id !== parent.id
+        )
+      ) {
+        throw new Error('The saved subcategories did not match the selected game and destination category.');
+      }
 
-      const updatedCategories = [...currentCategories, ...((insertedCategories as Category[]) ?? [])]
-        .sort((left, right) => left.sort_order - right.sort_order || left.name.localeCompare(right.name));
+      const updatedCategories = orderCategories([
+        ...currentCategories,
+        ...inserted,
+      ]);
       setCategoryMap((prev) => ({ ...prev, [game.id]: updatedCategories }));
       setCategoryClipboardNotice(
         `Pasted ${rows.length} subcategor${rows.length === 1 ? 'y' : 'ies'} into "${parent.name}".`
@@ -664,6 +706,7 @@ export function ManageGamesPage() {
                                   <button
                                     type="button"
                                     onClick={() => setShowCatModal({ gameId: game.id, cat: null, parentCategoryId: cat.id })}
+                                    aria-label={`Add subcategory under ${cat.name}`}
                                     className="rounded px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
                                   >
                                     Add subcategory
@@ -729,9 +772,11 @@ export function ManageGamesPage() {
 
       {showCatModal && (
         <CategoryModal
-          key={`${showCatModal.gameId}:${showCatModal.cat?.id ?? 'new'}:${showCatModal.parentCategoryId ?? 'main'}`}
+          key={`${showCatModal.gameId}:${showCatModal.cat?.id ?? 'new'}:${showCatModal.parentCategoryId ?? 'main'}:${showCatModal.initialName ?? ''}`}
           gameId={showCatModal.gameId}
           category={showCatModal.cat}
+          initialName={showCatModal.initialName}
+          initialTimingRules={showCatModal.initialTimingRules}
           existingCategories={categoryMap[showCatModal.gameId] ?? []}
           parentCategories={(categoryMap[showCatModal.gameId] ?? []).filter((category) => !category.parent_category_id)}
           initialParentCategoryId={showCatModal.parentCategoryId}
@@ -1201,6 +1246,8 @@ function GameModal({
 function CategoryModal({
   gameId,
   category,
+  initialName,
+  initialTimingRules,
   existingCategories,
   parentCategories,
   initialParentCategoryId,
@@ -1209,19 +1256,18 @@ function CategoryModal({
 }: {
   gameId: string;
   category: Category | null;
+  initialName?: string;
+  initialTimingRules?: string | null;
   existingCategories: Category[];
   parentCategories: Category[];
   initialParentCategoryId: string | null;
   onClose: () => void;
   onSaved: (keepAdding: boolean) => Promise<void>;
 }) {
-  const [name, setName] = useState(category?.name ?? '');
-  const [timingRules, setTimingRules] = useState(category?.timing_rules ?? '');
+  const [name, setName] = useState(initialName ?? category?.name ?? '');
+  const [timingRules, setTimingRules] = useState(initialTimingRules ?? category?.timing_rules ?? '');
   const [sharedCategoryIds, setSharedCategoryIds] = useState<string[]>([]);
   const [parentCategoryId, setParentCategoryId] = useState(initialParentCategoryId ?? '');
-  const [sortOrder, setSortOrder] = useState(
-    category?.sort_order ?? (Math.max(0, ...existingCategories.map((item) => item.sort_order)) + 10)
-  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
@@ -1237,6 +1283,18 @@ function CategoryModal({
       setError('Category name is required.');
       return;
     }
+    if (parentCategoryId && !parentCategories.some((parent) => parent.id === parentCategoryId)) {
+      setError('Select a valid main category for this subcategory.');
+      return;
+    }
+    const targetParentId = parentCategoryId || null;
+    const targetSiblings = existingCategories.filter(
+      (item) => item.parent_category_id === targetParentId && item.id !== category?.id
+    );
+    const categorySortOrder =
+      category && category.parent_category_id === targetParentId
+        ? category.sort_order
+        : Math.max(0, ...targetSiblings.map((item) => item.sort_order)) + 10;
     const dupe = parentCategoryId
       ? undefined
       : existingCategories.find(
@@ -1253,23 +1311,37 @@ function CategoryModal({
         game_id: gameId,
         name: trimmedName,
         timing_rules: timingRules.trim() || null,
-        sort_order: sortOrder,
-        parent_category_id: parentCategoryId || null,
+        sort_order: categorySortOrder,
+        parent_category_id: targetParentId,
       };
       let savedCategoryId = category?.id;
       if (category) {
-        const { error: updErr } = await supabase
+        const { data: updatedCategory, error: updErr } = await supabase
           .from('categories')
           .update(payload)
-          .eq('id', category.id);
+          .eq('id', category.id)
+          .select('id, game_id, parent_category_id')
+          .single();
         if (updErr) throw updErr;
+        if (
+          updatedCategory.game_id !== gameId ||
+          updatedCategory.parent_category_id !== targetParentId
+        ) {
+          throw new Error('The saved category did not match the selected game and parent category.');
+        }
       } else {
         const { data: insertedCategory, error: insErr } = await supabase
           .from('categories')
           .insert(payload)
-          .select('id')
+          .select('id, game_id, parent_category_id')
           .single();
         if (insErr) throw insErr;
+        if (
+          insertedCategory.game_id !== gameId ||
+          insertedCategory.parent_category_id !== targetParentId
+        ) {
+          throw new Error('The saved category did not match the selected game and parent category.');
+        }
         savedCategoryId = insertedCategory.id;
       }
 
@@ -1287,8 +1359,6 @@ function CategoryModal({
         setName('');
         setTimingRules('');
         setSharedCategoryIds([]);
-        setParentCategoryId('');
-        setSortOrder(sortOrder + 10);
         setSavedNotice('Category added. You can add another or close this form.');
       }
     } catch (cause) {
