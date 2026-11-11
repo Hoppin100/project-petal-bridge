@@ -20,7 +20,9 @@ export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
 
   const navLinks = [
     { label: 'Games', to: '/games' },
-    { label: 'Daily Challenge', to: '/daily-challenge' },
+    ...(profile?.role === 'owner'
+      ? [{ label: 'Daily Challenge', to: '/daily-challenge' }]
+      : []),
     { label: 'Submit', to: '/submit' },
     { label: 'Requests', to: '/request-game' },
   ];

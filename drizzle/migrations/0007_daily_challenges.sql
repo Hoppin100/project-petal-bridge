@@ -34,6 +34,16 @@ DECLARE
   v_candidate record;
   v_challenge public.daily_challenges%ROWTYPE;
 BEGIN
+  IF auth.uid() IS NULL OR NOT EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE id = auth.uid()
+      AND role = 'owner'
+  ) THEN
+    RAISE EXCEPTION 'Only the owner can view the daily challenge.'
+      USING ERRCODE = '42501';
+  END IF;
+
   v_reset_at := ((v_today + 1)::timestamp AT TIME ZONE 'UTC');
 
   SELECT *
@@ -205,5 +215,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.get_daily_challenge() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_daily_challenge() TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_daily_challenge() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_daily_challenge() TO authenticated;

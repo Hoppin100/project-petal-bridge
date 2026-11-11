@@ -1,6 +1,11 @@
 import type { Game } from "@/lib/types";
 
-export function isSlowerIsBetterGame(game: Pick<Game, "slug" | "title">): boolean {
+export function isSlowerIsBetterGame(
+  game: Pick<Game, "slug" | "title">,
+  isOwner = false,
+): boolean {
+  if (!isOwner) return false;
+
   const slug = game.slug
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")

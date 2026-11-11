@@ -3,12 +3,16 @@ import { bestRunTime, compareRunTimes, isSlowerIsBetterGame } from "@/lib/game-r
 
 describe("game-specific time rules", () => {
   it("recognizes Bike Universe by slug or title", () => {
-    expect(isSlowerIsBetterGame({ slug: "bike-universe", title: "Bike Universe" })).toBe(true);
-    expect(isSlowerIsBetterGame({ slug: "", title: "Bike Universe" })).toBe(true);
+    expect(isSlowerIsBetterGame({ slug: "bike-universe", title: "Bike Universe" })).toBe(false);
+    expect(isSlowerIsBetterGame({ slug: "bike-universe", title: "Bike Universe" }, true)).toBe(true);
+    expect(isSlowerIsBetterGame({ slug: "", title: "Bike Universe" }, true)).toBe(true);
   });
 
   it("does not apply Bike Universe scoring to other games", () => {
     expect(isSlowerIsBetterGame({ slug: "grand-theft-auto-v", title: "Grand Theft Auto V" })).toBe(
+      false,
+    );
+    expect(isSlowerIsBetterGame({ slug: "grand-theft-auto-v", title: "Grand Theft Auto V" }, true)).toBe(
       false,
     );
   });

@@ -4,11 +4,14 @@ import { supabase } from '@/lib/supabase';
 import { fetchGames } from '@/lib/games';
 import type { Category, Game, Profile, Run } from '@/lib/types';
 import { GameCard } from '@/components/GameCard';
+import { useAuth } from '@/lib/auth';
 import { linkHref } from '@/lib/router';
 import { formatTime, timeAgo } from '@/lib/format';
 import { compareRunTimes, isSlowerIsBetterGame } from '@/lib/game-rules';
 
 export function HomePage() {
+  const { profile } = useAuth();
+  const isOwner = profile?.role === 'owner';
   const [games, setGames] = useState<Game[]>([]);
   const [recentRuns, setRecentRuns] = useState<Run[]>([]);
   const [records, setRecords] = useState<Run[]>([]);
@@ -41,6 +44,7 @@ export function HomePage() {
         const currentBest = bestByCategory.get(run.category_id);
         const slowerIsBetter = isSlowerIsBetterGame(
           gamesById.get(run.game_id) ?? { slug: '', title: '' },
+          isOwner,
         );
         if (
           !currentBest ||
@@ -78,7 +82,7 @@ export function HomePage() {
       if (!cancelled) { setLoadError(true); setLoading(false); }
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [isOwner]);
 
   const gamesByActivity = useMemo(() => [...games].sort((a, b) =>
     (verifiedCounts[b.id] ?? 0) - (verifiedCounts[a.id] ?? 0) || a.title.localeCompare(b.title)
@@ -107,10 +111,12 @@ export function HomePage() {
             Browse games
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </a>
-          <a href={linkHref('/daily-challenge')} className="sr-btn-ghost">
-            <Trophy aria-hidden="true" className="h-4 w-4" />
-            Daily Challenge
-          </a>
+          {isOwner && (
+            <a href={linkHref('/daily-challenge')} className="sr-btn-ghost">
+              <Trophy aria-hidden="true" className="h-4 w-4" />
+              Daily Challenge
+            </a>
+          )}
           <a href={linkHref('/submit')} className="sr-btn-ghost">Submit a run</a>
         </div>
       </section>

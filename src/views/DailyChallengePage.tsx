@@ -9,12 +9,15 @@ import {
   Trophy,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useAuth } from "@/lib/auth";
 import { countdownParts, fetchDailyChallenge, targetBeatingRule } from "@/lib/daily-challenge";
 import type { DailyChallenge } from "@/lib/daily-challenge";
 import { formatTime } from "@/lib/format";
 import { linkHref } from "@/lib/router";
 
 export function DailyChallengePage() {
+  const { loading: authLoading, profile } = useAuth();
+  const isOwner = profile?.role === "owner";
   const [challenge, setChallenge] = useState<DailyChallenge | null>(null);
   const [challengeDate, setChallengeDate] = useState("");
   const [nextResetAt, setNextResetAt] = useState("");
@@ -49,8 +52,9 @@ export function DailyChallengePage() {
   }, []);
 
   useEffect(() => {
+    if (authLoading || !isOwner) return;
     void loadChallenge();
-  }, [loadChallenge]);
+  }, [authLoading, isOwner, loadChallenge]);
 
   useEffect(() => {
     const updateNow = () => setNow(Date.now());
@@ -85,6 +89,27 @@ export function DailyChallengePage() {
         timeZone: "UTC",
       }).format(new Date(`${challengeDate}T00:00:00Z`))
     : null;
+
+  if (authLoading) {
+    return (
+      <div className="sr-container flex min-h-64 items-center justify-center py-8" role="status">
+        <span className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[var(--sr-primary)] border-t-transparent" />
+        <span className="sr-only">Checking access</span>
+      </div>
+    );
+  }
+
+  if (!isOwner) {
+    return (
+      <div className="sr-container py-20 text-center">
+        <h1 className="text-2xl font-bold text-[var(--sr-text)]">Page not found</h1>
+        <Link to="/" className="sr-btn-primary mt-6">
+          <ArrowLeft className="h-4 w-4" />
+          Home
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="sr-container max-w-4xl py-8">

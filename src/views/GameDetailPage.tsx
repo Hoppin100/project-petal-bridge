@@ -26,7 +26,8 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   const [notFound, setNotFound] = useState(false);
   const [underConstruction, setUnderConstruction] = useState(false);
   const [loadError, setLoadError] = useState('');
-  const slowerIsBetter = game ? isSlowerIsBetterGame(game) : false;
+  const slowerIsBetter =
+    profile?.role === 'owner' && game ? isSlowerIsBetterGame(game, true) : false;
 
   useEffect(() => {
     if (authLoading) return;

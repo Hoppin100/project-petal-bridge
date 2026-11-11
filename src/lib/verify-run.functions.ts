@@ -267,7 +267,7 @@ export const runVerification = createServerFn({ method: 'POST' })
     // Statistical comparison with verified reference examples
     if (verifiedTimes.length > 0) {
       evidenceBasis = evidenceBasis === 'incomplete' ? 'statistical' : 'statistical';
-      const slowerIsBetter = game ? isSlowerIsBetterGame(game) : false;
+      const slowerIsBetter = game ? isSlowerIsBetterGame(game, true) : false;
       const bestRef = bestRunTime(verifiedTimes, slowerIsBetter)!;
       const meanRef =
         verifiedTimes.reduce((a, b) => a + b, 0) / verifiedTimes.length;
@@ -425,7 +425,7 @@ export const runVerification = createServerFn({ method: 'POST' })
         verifiedTimes.length > 0
           ? bestRunTime(
               verifiedTimes,
-              game ? isSlowerIsBetterGame(game) : false,
+              game ? isSlowerIsBetterGame(game, true) : false,
             )
           : null,
     };
