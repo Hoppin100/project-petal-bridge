@@ -15,6 +15,7 @@ export function Footer({ launchLocked = false }: { launchLocked?: boolean }) {
           <a href="https://www.youtube.com/@SplitRushOffical" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[var(--sr-primary)]">YouTube</a>
           {!launchLocked && <>
             <a href={linkHref('/games')} className="transition-colors hover:text-[var(--sr-primary)]">Games</a>
+            <a href={linkHref('/daily-challenge')} className="transition-colors hover:text-[var(--sr-primary)]">Daily Challenge</a>
             <a href={linkHref('/submit')} className="transition-colors hover:text-[var(--sr-primary)]">Submit a run</a>
           </>}
         </nav>

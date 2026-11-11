@@ -6,6 +6,7 @@ import type {
   RejectedRunVideo,
   RunVideoAnalysis,
 } from '@/lib/run-video-analysis.server';
+import { bestRunTime, isSlowerIsBetterGame } from '@/lib/game-rules';
 
 const HEURISTIC_VERSION = 'splitrush-va-heuristic-v2';
 
@@ -266,10 +267,11 @@ export const runVerification = createServerFn({ method: 'POST' })
     // Statistical comparison with verified reference examples
     if (verifiedTimes.length > 0) {
       evidenceBasis = evidenceBasis === 'incomplete' ? 'statistical' : 'statistical';
-      const bestRef = Math.min(...verifiedTimes);
+      const slowerIsBetter = game ? isSlowerIsBetterGame(game) : false;
+      const bestRef = bestRunTime(verifiedTimes, slowerIsBetter)!;
       const meanRef =
         verifiedTimes.reduce((a, b) => a + b, 0) / verifiedTimes.length;
-      const ratio = run.time_ms / bestRef;
+      const ratio = slowerIsBetter ? bestRef / run.time_ms : run.time_ms / bestRef;
 
       observed.push(
         `${verifiedTimes.length} verified reference example(s) for this game/category. Best reference time: ${fmtTime(bestRef)}. Mean: ${fmtTime(meanRef)}. Submitted time: ${fmtTime(run.time_ms)}.`
@@ -277,12 +279,12 @@ export const runVerification = createServerFn({ method: 'POST' })
 
       if (ratio < 0.5) {
         concerns.push(
-          `Submitted time is ${Math.round((1 - ratio) * 100)}% faster than the best verified reference. This is a large deviation that warrants investigation.`
+          `Submitted time is ${Math.round((1 - ratio) * 100)}% better than the best verified reference. This is a large deviation that warrants investigation.`
         );
         confidence = 0.45;
       } else if (ratio < 0.85) {
         concerns.push(
-          `Submitted time is notably faster than the best verified reference (ratio ${ratio.toFixed(2)}).`
+          `Submitted time is notably better than the best verified reference (ratio ${ratio.toFixed(2)}).`
         );
         confidence = 0.55;
       } else if (ratio > 2.0) {
@@ -419,7 +421,13 @@ export const runVerification = createServerFn({ method: 'POST' })
       timing_rules: category?.timing_rules ?? null,
       verified_ref_count: verifiedRefs.length,
       rejected_ref_count: rejectedRefs.length,
-      best_verified_time_ms: verifiedTimes.length > 0 ? Math.min(...verifiedTimes) : null,
+      best_verified_time_ms:
+        verifiedTimes.length > 0
+          ? bestRunTime(
+              verifiedTimes,
+              game ? isSlowerIsBetterGame(game) : false,
+            )
+          : null,
     };
 
     const refIds = refList.map((r) => r.id);

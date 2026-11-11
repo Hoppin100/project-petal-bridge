@@ -532,6 +532,7 @@ export type Database = {
         Returns: string
       }
       delete_run: { Args: { p_run: string }; Returns: undefined }
+      get_daily_challenge: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

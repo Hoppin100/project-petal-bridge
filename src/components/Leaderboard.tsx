@@ -5,17 +5,30 @@ import { formatTime, timeAgo } from '@/lib/format';
 import { linkHref } from '@/lib/router';
 import { Avatar } from '@/components/Avatar';
 import { useAuth } from '@/lib/auth';
+import { compareRunTimes } from '@/lib/game-rules';
 
 interface LeaderboardProps {
   runs: Run[];
   runnerMap?: Record<string, Profile>;
   showVideo?: boolean;
+  slowerIsBetter?: boolean;
 }
 
-export function Leaderboard({ runs, runnerMap, showVideo = true }: LeaderboardProps) {
+export function Leaderboard({
+  runs,
+  runnerMap,
+  showVideo = true,
+  slowerIsBetter = false,
+}: LeaderboardProps) {
   const [filter, setFilter] = useState('');
   const { profile } = useAuth();
-  const sorted = useMemo(() => runs.filter((run) => run.status === 'verified').sort((a, b) => a.time_ms - b.time_ms), [runs]);
+  const sorted = useMemo(
+    () =>
+      runs
+        .filter((run) => run.status === 'verified')
+        .sort((a, b) => compareRunTimes(a.time_ms, b.time_ms, slowerIsBetter)),
+    [runs, slowerIsBetter],
+  );
   const filtered = useMemo(() => {
     const query = filter.trim().toLowerCase();
     if (!query) return sorted;

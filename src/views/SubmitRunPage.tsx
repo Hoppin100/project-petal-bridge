@@ -3,6 +3,7 @@ import { ArrowLeft, Loader2, Send, Youtube, Clock, ChevronDown, ChevronRight } f
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import type { Game, Category } from '@/lib/types';
+import { isComingSoonGame } from '@/lib/games';
 import { isValidYouTubeUrl, parseYouTubeId, formatTime } from '@/lib/format';
 import { linkHref } from '@/lib/router';
 
@@ -89,6 +90,8 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
   const endSeconds = parseVideoTimestamp(videoEnd);
   const mainCategories = categories.filter((category) => !category.parent_category_id);
   const selectedCategory = categories.find((category) => category.id === categoryId);
+  const selectedGame = games.find((game) => game.id === gameId);
+  const selectedGameComingSoon = selectedGame ? isComingSoonGame(selectedGame) : false;
 
   const timeMs = (() => {
     const h = parseInt(hours || '0', 10) || 0;
@@ -111,6 +114,10 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
     if (!gameId) {
       setValidationField('game');
       setError('Please select a game.');
+      return;
+    }
+    if (selectedGame && isComingSoonGame(selectedGame)) {
+      setError(`Cannot submit a run yet — ${selectedGame.title} hasn’t been released.`);
       return;
     }
     if (
@@ -252,6 +259,11 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
               ))}
             </select>
             {validationField === 'game' && error && <p role="alert" className="mt-1 text-xs text-red-400">{error}</p>}
+            {selectedGameComingSoon && (
+              <p role="status" className="mt-2 text-sm text-amber-300">
+                Cannot submit a run yet — {selectedGame?.title} hasn’t been released.
+              </p>
+            )}
           </div>
           <fieldset aria-required="true">
             <legend className="mb-1 block text-sm font-medium text-emerald-100">Category</legend>
@@ -459,7 +471,7 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
           </div>
         )}
 
-        <button type="submit" disabled={submitting} className="sr-btn-primary">
+        <button type="submit" disabled={submitting || selectedGameComingSoon} className="sr-btn-primary">
           {submitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (

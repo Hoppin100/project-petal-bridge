@@ -8,6 +8,7 @@ import { linkHref } from '@/lib/router';
 import { formatTime } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { isComingSoonGame } from '@/lib/games';
+import { isSlowerIsBetterGame } from '@/lib/game-rules';
 
 interface GameDetailPageProps {
   slug: string;
@@ -25,6 +26,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   const [notFound, setNotFound] = useState(false);
   const [underConstruction, setUnderConstruction] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const slowerIsBetter = game ? isSlowerIsBetterGame(game) : false;
 
   useEffect(() => {
     if (authLoading) return;
@@ -108,7 +110,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
         )
         .eq('category_id', activeCat)
         .eq('status', 'verified')
-        .order('time_ms', { ascending: true })
+        .order('time_ms', { ascending: !slowerIsBetter })
         .limit(100);
       const runList = (r as Run[]) ?? [];
       setRuns(runList);
@@ -128,7 +130,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
         setRunnerMap({});
       }
     })();
-  }, [activeCat]);
+  }, [activeCat, slowerIsBetter]);
 
   if (loading || authLoading) {
     return (
@@ -189,7 +191,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   const visibleSubcategories = categories.filter(
     (category) => category.parent_category_id === expandedCategoryId
   );
-  const worldRecord = runs[0]; // sorted ascending
+  const worldRecord = runs[0];
   const comingSoon = isComingSoonGame(game);
 
   return (
@@ -233,12 +235,20 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
                 </p>
               )}
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <a
-                  href={linkHref('/submit')}
-                  className="sr-btn-primary"
-                >
-                  Submit a run
-                </a>
+                {comingSoon ? (
+                  <div>
+                    <button type="button" disabled className="sr-btn-primary cursor-not-allowed opacity-60">
+                      Submit a run
+                    </button>
+                    <p role="status" className="mt-2 text-sm text-amber-300">
+                      Cannot submit a run yet — {game.title} hasn’t been released.
+                    </p>
+                  </div>
+                ) : (
+                  <a href={linkHref('/submit')} className="sr-btn-primary">
+                    Submit a run
+                  </a>
+                )}
                 {game.page_url && (
                   <a
                     href={game.page_url}
@@ -348,7 +358,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
               <h2 className="text-lg font-bold">Leaderboard</h2>
               {activeCategory && <p className="text-sm text-[var(--sr-text-muted)]">{activeCategory.name}</p>}
             </div>
-            <Leaderboard runs={runs} runnerMap={runnerMap} />
+            <Leaderboard runs={runs} runnerMap={runnerMap} slowerIsBetter={slowerIsBetter} />
           </>
         )}
       </section>

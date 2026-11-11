@@ -6,6 +6,7 @@ import type { Category, Game, Profile, Run } from '@/lib/types';
 import { GameCard } from '@/components/GameCard';
 import { linkHref } from '@/lib/router';
 import { formatTime, timeAgo } from '@/lib/format';
+import { compareRunTimes, isSlowerIsBetterGame } from '@/lib/game-rules';
 
 export function HomePage() {
   const [games, setGames] = useState<Game[]>([]);
@@ -23,28 +24,40 @@ export function HomePage() {
       const [gameResult, recentResult, recordsResult, activityResult] = await Promise.all([
         fetchGames(),
         supabase.from('runs').select('id, game_id, category_id, runner_id, time_ms, platform, video_url, video_id, status, rejection_reason, verified_by, verified_at, notes, created_at').order('created_at', { ascending: false }).limit(8),
-        supabase.from('runs').select('id, game_id, category_id, runner_id, time_ms, platform, video_url, video_id, status, rejection_reason, verified_by, verified_at, notes, created_at').eq('status', 'verified').order('time_ms', { ascending: true }).limit(100),
+        supabase.from('runs').select('id, game_id, category_id, runner_id, time_ms, platform, video_url, video_id, status, rejection_reason, verified_by, verified_at, notes, created_at').eq('status', 'verified').order('created_at', { ascending: false }).limit(1000),
         supabase.from('runs').select('id, game_id, category_id, runner_id, time_ms, platform, video_url, video_id, status, rejection_reason, verified_by, verified_at, notes, created_at').eq('status', 'verified').order('created_at', { ascending: false }).limit(100),
       ]);
       if (cancelled) return;
       const gameList = gameResult.games;
       const recent = (recentResult.data as Run[]) ?? [];
-      const fastest = (recordsResult.data as Run[]) ?? [];
+      const verifiedRuns = (recordsResult.data as Run[]) ?? [];
       const verified = (activityResult.data as Run[]) ?? [];
       setGames(gameList);
       setRecentRuns(recent);
+      const gamesById = new Map<string, Game>();
+      for (const game of gameList) gamesById.set(game.id, game);
       const bestByCategory = new Map<string, Run>();
-      for (const run of fastest) {
-        if (!bestByCategory.has(run.category_id)) bestByCategory.set(run.category_id, run);
+      for (const run of verifiedRuns) {
+        const currentBest = bestByCategory.get(run.category_id);
+        const slowerIsBetter = isSlowerIsBetterGame(
+          gamesById.get(run.game_id) ?? { slug: '', title: '' },
+        );
+        if (
+          !currentBest ||
+          compareRunTimes(run.time_ms, currentBest.time_ms, slowerIsBetter) < 0
+        ) {
+          bestByCategory.set(run.category_id, run);
+        }
       }
-      setRecords([...bestByCategory.values()].slice(0, 5));
+      const topRecords = [...bestByCategory.values()].slice(0, 5);
+      setRecords(topRecords);
 
       const counts: Record<string, number> = {};
       for (const run of verified) counts[run.game_id] = (counts[run.game_id] ?? 0) + 1;
       setVerifiedCounts(counts);
 
       const allRunsById = new Map<string, Run>();
-      for (const run of [...recent, ...fastest, ...verified]) allRunsById.set(run.id, run);
+      for (const run of [...recent, ...topRecords, ...verified]) allRunsById.set(run.id, run);
       const allRuns = [...allRunsById.values()];
       const runnerIds = [...new Set(allRuns.map((run) => run.runner_id))];
       const categoryIds = [...new Set(allRuns.map((run) => run.category_id))];
@@ -93,6 +106,10 @@ export function HomePage() {
           <a href={linkHref('/games')} className="sr-btn-primary">
             Browse games
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
+          </a>
+          <a href={linkHref('/daily-challenge')} className="sr-btn-ghost">
+            <Trophy aria-hidden="true" className="h-4 w-4" />
+            Daily Challenge
           </a>
           <a href={linkHref('/submit')} className="sr-btn-ghost">Submit a run</a>
         </div>
