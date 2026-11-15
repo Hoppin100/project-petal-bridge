@@ -121,7 +121,7 @@ export function GamesPage() {
               <button
                 type="button"
                 onClick={() => setQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--sr-text-muted)] hover:bg-[var(--sr-surface-2)] hover:text-[var(--sr-text)]"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-[var(--sr-text-muted)] hover:bg-[var(--sr-surface-2)] hover:text-[var(--sr-text)]"
                 aria-label="Clear game filter"
               >
                 <X aria-hidden="true" className="h-4 w-4" />
@@ -139,7 +139,7 @@ export function GamesPage() {
       </div>
 
       {loadError && (
-        <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 border-l-2 border-red-400 bg-[var(--sr-surface)] px-3 py-3 text-sm text-[var(--sr-text-dim)]">
+        <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 border-l-2 border-[var(--sr-danger)] bg-[var(--sr-bad-bg)] px-3 py-3 text-sm text-[var(--sr-text-dim)]">
           <span>Games could not be loaded. {loadError}</span>
           <button type="button" className="sr-btn-ghost min-h-8 py-1" onClick={() => window.location.reload()}>Retry</button>
         </div>

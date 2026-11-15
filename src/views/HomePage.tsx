@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Gamepad2, Trophy } from 'lucide-react';
+import { ArrowRight, Gamepad2, Trophy, Youtube, MessageSquare, Send } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchGames } from '@/lib/games';
 import type { Category, Game, Profile, Run } from '@/lib/types';
@@ -94,83 +94,173 @@ export function HomePage() {
   const rankOf = (run: Run) => run.status === 'verified' ? records.findIndex((r) => r.id === run.id) + 1 : 0;
 
   return (
-    <div className="sr-container grid gap-4 py-5 lg:grid-cols-[minmax(0,1fr)_400px]">
-      <section className="sr-panel flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 lg:col-span-2">
-        <div className="max-w-2xl">
+    <div className="sr-container pb-10">
+      {/* Leaderboard-first hero: copy on the left, current records on the right */}
+      <section className="grid gap-8 border-b border-[var(--sr-border)] py-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-10">
+        <div className="max-w-xl">
           <p className="sr-eyebrow flex items-center gap-2">
             <Trophy aria-hidden="true" className="h-4 w-4" />
             Community leaderboards
           </p>
-          <h1 className="text-2xl font-bold text-[var(--sr-text)] sm:text-3xl">Every run counts.</h1>
-          <p className="mt-2 text-sm leading-6 text-[var(--sr-text-dim)]">
-            Find a game, submit your best time, and see how you stack up.
+          <h1 className="text-3xl font-bold leading-tight sm:text-4xl">
+            Every run counts.<br />
+            <span className="text-[var(--sr-primary)]">Every split is checked.</span>
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-[var(--sr-text-dim)]">
+            Pick a game, post your time with video proof, and get reviewed by the
+            team. Verified runs go straight onto the board.
           </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <a href={linkHref('/games')} className="sr-btn-primary">
-            Browse games
-            <ArrowRight aria-hidden="true" className="h-4 w-4" />
-          </a>
-          {isOwner && (
-            <a href={linkHref('/daily-challenge')} className="sr-btn-ghost">
-              <Trophy aria-hidden="true" className="h-4 w-4" />
-              Daily Challenge
+          <div className="mt-5 flex flex-wrap gap-2">
+            <a href={linkHref('/games')} className="sr-btn-primary">
+              Browse games
+              <ArrowRight aria-hidden="true" className="h-4 w-4" />
             </a>
+            <a href={linkHref('/submit')} className="sr-btn-ghost">Submit a run</a>
+            {isOwner && (
+              <a href={linkHref('/daily-challenge')} className="sr-btn-ghost">
+                <Trophy aria-hidden="true" className="h-4 w-4" />
+                Daily Challenge
+              </a>
+            )}
+          </div>
+          {!loading && games.length > 0 && (
+            <p className="sr-mono mt-5 text-xs text-[var(--sr-text-muted)]">
+              {games.length} {games.length === 1 ? 'game' : 'games'} tracked
+              {featuredGames.length > 0 && <> · {featuredGames.length} featured</>}
+            </p>
           )}
-          <a href={linkHref('/submit')} className="sr-btn-ghost">Submit a run</a>
         </div>
+
+        <aside aria-label="Current world records" className="min-w-0 border-l-2 border-[var(--sr-primary)] pl-4 lg:border-l lg:pl-0">
+          <p className="sr-rule-title">Current records</p>
+          {loading ? (
+            <div className="py-4"><LoadingRows /></div>
+          ) : records.length ? (
+            <ul className="mt-2">
+              {records.slice(0, 3).map((run) => {
+                const game = games.find((item) => item.id === run.game_id);
+                const runner = profiles[run.runner_id];
+                return (
+                  <li key={run.id} className="flex items-center gap-3 border-b border-[var(--sr-border)] py-3 last:border-0">
+                    <GameArt game={game} small />
+                    <div className="min-w-0 flex-1">
+                      <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="block truncate font-semibold text-[var(--sr-link)] hover:underline">{game?.title ?? 'Game'}</a>
+                      <p className="truncate text-xs text-[var(--sr-text-muted)]">{categories[run.category_id]?.name ?? 'Category'} · {runner?.username ?? 'Runner'}</p>
+                    </div>
+                    <a href={run.video_url} target="_blank" rel="noopener noreferrer" className="sr-mono whitespace-nowrap font-semibold text-[var(--sr-text)] hover:text-[var(--sr-primary)]">{formatTime(run.time_ms)}</a>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm text-[var(--sr-text-muted)]">Records appear here once runs are verified.</p>
+          )}
+          <a href={linkHref('/games')} className="mt-3 inline-flex text-xs font-semibold text-[var(--sr-link)] hover:underline">All games and boards →</a>
+        </aside>
       </section>
 
-      {loadError && <p role="status" className="sr-panel px-4 py-3 text-sm text-[var(--sr-text-dim)] lg:col-span-2">Some data could not be loaded. Try refreshing the page.</p>}
+      {loadError && <p role="status" className="sr-panel mt-6 px-4 py-3 text-sm text-[var(--sr-text-dim)]">Some data could not be loaded. Try refreshing the page.</p>}
 
-      {featuredGames.length > 0 && <section className="sr-panel min-w-0">
-        <h2 className="sr-panel-title">Featured games <a href={linkHref('/games')} className="text-xs font-semibold normal-case text-[var(--sr-link)] hover:underline">See all</a></h2>
-        <div className="grid grid-cols-2 gap-3 px-4 pb-4 sm:grid-cols-3">{featuredGames.slice(0, 6).map((game) => <GameCard key={game.id} game={game} />)}</div>
-      </section>}
-
-      <aside className="min-w-0 space-y-4">
-        <section className="sr-panel">
-          <h2 className="sr-panel-title">World records <a href={linkHref('/games')} className="text-xs font-semibold normal-case text-[var(--sr-link)] hover:underline">All games</a></h2>
-          {loading ? <div className="px-4"><LoadingRows /></div> : records.length ? <ul>{records.map((run) => {
-            const game = games.find((item) => item.id === run.game_id);
-            const runner = profiles[run.runner_id];
-            return <li key={run.id} className="flex items-center gap-3 px-4 py-2.5 odd:bg-[var(--sr-surface-2)]"><GameArt game={game} small /><div className="min-w-0 flex-1"><a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="block truncate font-semibold text-[var(--sr-link)] hover:underline">{game?.title ?? 'Game'}</a><p className="truncate text-xs text-[var(--sr-text-muted)]">{categories[run.category_id]?.name ?? 'Category'} · {runner?.username ?? 'Runner'}</p></div><a href={run.video_url} target="_blank" rel="noopener noreferrer" className="text-right font-semibold tabular-nums text-[var(--sr-text)] hover:underline">{formatTime(run.time_ms)}</a></li>;
-          })}</ul> : <div className="px-4"><EmptyLine text="Records appear here once runs are verified." /></div>}
+      {featuredGames.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-3">
+            <h2 className="sr-rule-title flex-1">Featured games</h2>
+            <a href={linkHref('/games')} className="sr-link text-xs font-semibold">See all</a>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">{featuredGames.slice(0, 6).map((game) => <GameCard key={game.id} game={game} />)}</div>
         </section>
+      )}
 
-        <section className="sr-panel">
-          <h2 className="sr-panel-title">Popular games <a href={linkHref('/games')} className="text-xs font-semibold normal-case text-[var(--sr-link)] hover:underline">See all</a></h2>
-          {loading ? <div className="px-4"><LoadingRows /></div> : popularGames.length ? <ul>{popularGames.map((game) => <li key={game.id} className="odd:bg-[var(--sr-surface-2)]"><a href={linkHref(`/games/${game.slug}`)} className="flex items-center gap-3 px-4 py-2.5"><GameArt game={game} small /><span className="min-w-0 flex-1"><span className="block truncate font-semibold text-[var(--sr-link)] hover:underline">{game.title}</span>{game.is_featured && <span className="text-xs text-[var(--sr-text-muted)]">Featured</span>}</span><span className="text-center"><span className="block font-bold text-[var(--sr-text)]">{verifiedCounts[game.id] ?? 0}</span><span className="text-xs text-[var(--sr-text-muted)]">Runs</span></span></a></li>)}</ul> : <div className="px-4"><EmptyLine text="Games show here once they are added." /></div>}
-        </section>
-
-        <section className="sr-panel min-w-0">
-          <h2 className="sr-panel-title">
-            Latest runs
-            <span className="text-xs font-medium normal-case text-[var(--sr-text-muted)]">
-              New submissions and decisions
-            </span>
+      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="min-w-0" aria-label="Latest runs">
+          <h2 className="sr-rule-title">
+            <span className="text-[var(--sr-text)]">Latest runs</span>
+            <span className="text-xs font-medium normal-case tracking-normal text-[var(--sr-text-muted)]">New submissions and review decisions</span>
           </h2>
-          <div className="space-y-5 px-4 pb-4">
-            {loading ? <LoadingRows /> : recentRuns.length ? recentRuns.map((run) => {
-              const game = games.find((item) => item.id === run.game_id);
-              const runner = profiles[run.runner_id];
-              const category = categories[run.category_id];
-              const rank = rankOf(run);
-              return <article key={run.id} className="flex gap-3">
-                <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="flex-shrink-0"><GameArt game={game} small /></a>
-                <div className="min-w-0 flex-1">
-                  <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="block truncate font-bold text-[var(--sr-text)] hover:underline">{game?.title ?? 'Game'}</a>
-                  <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded border border-[var(--sr-border)] bg-[var(--sr-bg-2)] px-3 py-2.5 text-sm">
-                    <div className="min-w-0"><span className="block truncate font-semibold text-[var(--sr-link)]">{category?.name ?? 'Category'}</span><p className="mt-1 truncate text-xs text-[var(--sr-text-muted)]">{run.platform}</p></div>
-                    <div className="whitespace-nowrap"><p className="font-semibold text-[var(--sr-text)]">{run.status === 'verified' ? (rank ? placeLabel(rank) : 'Verified') : run.status === 'pending' ? 'Pending' : 'Rejected'}</p><p className="mt-0.5 tabular-nums text-[var(--sr-text-dim)]">{formatTime(run.time_ms)}</p></div>
-                    <div className="col-span-2 min-w-0">{runner ? <a href={linkHref(`/profile/${runner.username}`)} className="block truncate font-semibold text-[var(--sr-link)] hover:underline">{runner.username}</a> : <span className="text-[var(--sr-text-muted)]">Runner</span>}<p className="mt-0.5 text-[var(--sr-text-dim)]">{timeAgo(run.created_at)}</p></div>
-                  </div>
-                </div>
-              </article>;
-            }) : <EmptyLine text="No runs have been submitted yet." href="/games" />}
+          <div className="mt-2">
+            {loading ? <div className="py-3"><LoadingRows /></div> : recentRuns.length ? (
+              <ul className="divide-y divide-[var(--sr-border)] border-y border-[var(--sr-border)]">
+                {recentRuns.map((run) => {
+                  const game = games.find((item) => item.id === run.game_id);
+                  const runner = profiles[run.runner_id];
+                  const category = categories[run.category_id];
+                  const rank = rankOf(run);
+                  return (
+                    <li key={run.id} className="flex items-center gap-3 py-3">
+                      <StatusDot status={run.status} />
+                      <GameArt game={game} small />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm">
+                          <a href={game ? linkHref(`/games/${game.slug}`) : linkHref('/games')} className="font-semibold text-[var(--sr-text)] hover:text-[var(--sr-link)]">{game?.title ?? 'Game'}</a>
+                          <span className="text-[var(--sr-text-muted)]"> — {category?.name ?? 'Category'}</span>
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-[var(--sr-text-muted)]">
+                          {runner ? <a href={linkHref(`/profile/${runner.username}`)} className="font-medium text-[var(--sr-link)] hover:underline">{runner.username}</a> : 'Runner'}
+                          {' · '}{run.platform} · {timeAgo(run.created_at)}
+                        </p>
+                      </div>
+                      <div className="whitespace-nowrap text-right">
+                        <p className="sr-mono text-sm font-semibold text-[var(--sr-text)]">{formatTime(run.time_ms)}</p>
+                        <p className="text-xs text-[var(--sr-text-muted)]">{run.status === 'verified' ? (rank ? placeLabel(rank) : 'Verified') : run.status === 'pending' ? 'In review' : 'Rejected'}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : <EmptyLine text="No runs have been submitted yet." href="/games" />}
           </div>
         </section>
-      </aside>
+
+        <aside className="min-w-0 space-y-8">
+          <section aria-label="Popular games">
+            <h2 className="sr-rule-title">Popular games</h2>
+            {loading ? <div className="py-4"><LoadingRows /></div> : popularGames.length ? (
+              <ul className="mt-2 divide-y divide-[var(--sr-border)] border-y border-[var(--sr-border)]">
+                {popularGames.map((game, index) => (
+                  <li key={game.id}>
+                    <a href={linkHref(`/games/${game.slug}`)} className="flex items-center gap-3 py-3">
+                      <span className="sr-mono w-6 flex-shrink-0 text-right text-xs font-semibold text-[var(--sr-text-muted)]">{String(index + 1).padStart(2, '0')}</span>
+                      <GameArt game={game} small />
+                      <span className="min-w-0 flex-1 truncate font-semibold text-[var(--sr-link)] hover:underline">{game.title}</span>
+                      <span className="text-right">
+                        <span className="block sr-num text-base leading-5">{verifiedCounts[game.id] ?? 0}</span>
+                        <span className="text-xs text-[var(--sr-text-muted)]">{(verifiedCounts[game.id] ?? 0) === 1 ? 'run' : 'runs'}</span>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : <div className="mt-2"><EmptyLine text="Games show here once they are added." href="/games" /></div>}
+          </section>
+
+          <section aria-label="Community">
+            <h2 className="sr-rule-title">Community</h2>
+            <div className="mt-2 divide-y divide-[var(--sr-border)] border-y border-[var(--sr-border)]">
+              <a href="https://discord.gg/JySJqfagAq" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 py-3 group">
+                <MessageSquare aria-hidden="true" className="h-4 w-4 flex-shrink-0 text-[var(--sr-primary)]" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold text-[var(--sr-text)] group-hover:text-[var(--sr-link)]">SplitRush Discord</span>
+                  <span className="block text-xs text-[var(--sr-text-muted)]">Race announcements, routing, and off-topic</span>
+                </span>
+              </a>
+              <a href="https://www.youtube.com/@SplitRushOffical" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 py-3 group">
+                <Youtube aria-hidden="true" className="h-4 w-4 flex-shrink-0 text-[var(--sr-primary)]" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold text-[var(--sr-text)] group-hover:text-[var(--sr-link)]">YouTube</span>
+                  <span className="block text-xs text-[var(--sr-text-muted)]">Verified run highlights</span>
+                </span>
+              </a>
+              <a href={linkHref('/request-game')} className="flex items-center gap-3 py-3 group">
+                <Send aria-hidden="true" className="h-4 w-4 flex-shrink-0 text-[var(--sr-primary)]" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold text-[var(--sr-text)] group-hover:text-[var(--sr-link)]">Request a game</span>
+                  <span className="block text-xs text-[var(--sr-text-muted)]">Suggest the next leaderboard</span>
+                </span>
+              </a>
+            </div>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -180,7 +270,13 @@ function EmptyLine({ text, href }: { text: string; href?: string }) {
 }
 
 function LoadingRows() {
-  return <div className="space-y-2 py-3" aria-label="Loading"><div className="h-8 animate-pulse rounded bg-[var(--sr-surface-2)]" /><div className="h-8 animate-pulse rounded bg-[var(--sr-surface-2)]" /><div className="h-8 animate-pulse rounded bg-[var(--sr-surface-2)]" /></div>;
+  return <div className="space-y-2 py-3" aria-label="Loading"><div className="h-8 animate-pulse rounded-md bg-[var(--sr-surface-2)]" /><div className="h-8 animate-pulse rounded-md bg-[var(--sr-surface-2)]" /><div className="h-8 animate-pulse rounded-md bg-[var(--sr-surface-2)]" /></div>;
+}
+
+function StatusDot({ status }: { status: Run['status'] }) {
+  const color = status === 'verified' ? 'var(--sr-primary)' : status === 'pending' ? 'var(--sr-warn)' : 'var(--sr-danger)';
+  const label = status === 'verified' ? 'Verified run' : status === 'pending' ? 'Run pending review' : 'Rejected run';
+  return <span aria-label={label} title={label} className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: color }} />;
 }
 
 function GameArt({ game, small = false }: { game: Game | undefined; small?: boolean }) {

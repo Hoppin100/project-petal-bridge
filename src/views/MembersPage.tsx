@@ -79,7 +79,7 @@ export function MembersPage() {
       <div><p className="sr-eyebrow">Owner tools</p><h1 className="mt-1 flex items-center gap-2 text-3xl font-bold"><Users className="h-7 w-7" />Members</h1><p className="mt-1 text-sm text-[var(--sr-text-muted)]">Promote trusted members or remove owner access.</p></div>
       <div className="relative w-full sm:w-72"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sr-text-muted)]" /><input className="sr-input pl-9" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Find a member" aria-label="Find a member" /></div>
     </div>
-    {error && <p role="alert" className="mb-4 border-l-2 border-red-400 px-3 py-2 text-sm text-red-300">{error} <button className="sr-link ml-2" onClick={() => void load()}>Retry</button></p>}
+    {error && <p role="alert" className="mb-4 border-l-2 border-[var(--sr-danger)] px-3 py-2 text-sm text-[var(--sr-danger)]">{error} <button className="sr-link ml-2" onClick={() => void load()}>Retry</button></p>}
     {notice && <p role="status" className="mb-4 border-l-2 border-[var(--sr-primary)] px-3 py-2 text-sm text-[var(--sr-text-dim)]">{notice}</p>}
     {loading ? <div className="sr-panel p-8 text-center text-sm text-[var(--sr-text-muted)]">Loading members…</div> : visible.length === 0 ? <div className="sr-panel p-8 text-center text-sm text-[var(--sr-text-muted)]">No members found. Try another name.</div> : <div className="sr-panel divide-y divide-[var(--sr-border)] px-4">
       {visible.map((member) => <div key={member.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">

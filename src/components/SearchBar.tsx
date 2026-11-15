@@ -81,7 +81,7 @@ export function SearchBar({ onNavigate, variant = 'full' }: SearchBarProps) {
   return (
     <div ref={boxRef} className="relative w-full">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-700" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sr-text-muted)]" />
         <input
           type="text"
           value={query}
@@ -104,7 +104,7 @@ export function SearchBar({ onNavigate, variant = 'full' }: SearchBarProps) {
               setResults([]);
               setOpen(false);
             }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--sr-text-muted)] hover:bg-[var(--sr-surface-2)] hover:text-[var(--sr-text)]"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-[var(--sr-text-muted)] hover:bg-[var(--sr-surface-2)] hover:text-[var(--sr-text)]"
             aria-label="Clear search"
           >
             <X className="h-4 w-4" />
@@ -113,7 +113,7 @@ export function SearchBar({ onNavigate, variant = 'full' }: SearchBarProps) {
       </div>
 
       {open && results.length > 0 && (
-        <div id="game-search-results" role="listbox" className="absolute z-50 mt-2 w-full overflow-hidden rounded-lg border border-[var(--sr-border)] bg-[var(--sr-surface)] shadow-2xl">
+        <div id="game-search-results" role="listbox" className="absolute z-50 mt-2 w-full overflow-hidden rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface)] shadow-lg">
           {results.map((game, i) => (
             <a
               key={game.id}
@@ -143,11 +143,11 @@ export function SearchBar({ onNavigate, variant = 'full' }: SearchBarProps) {
                 <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-[var(--sr-surface-2)] text-[var(--sr-text-muted)]"><Gamepad2 className="h-4 w-4" /></div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-emerald-50">
+                <p className="truncate text-sm font-semibold text-[var(--sr-text)]">
                   {game.title}
                 </p>
                 {game.blurb && (
-                  <p className="truncate text-xs text-emerald-700">
+                  <p className="truncate text-xs text-[var(--sr-text-muted)]">
                     {game.blurb.slice(0, 60)}
                   </p>
                 )}
@@ -158,7 +158,7 @@ export function SearchBar({ onNavigate, variant = 'full' }: SearchBarProps) {
       )}
 
       {open && query.trim().length >= 2 && results.length === 0 && (
-        <div className="absolute z-50 mt-2 w-full rounded-lg border border-[var(--sr-border)] bg-[var(--sr-surface)] px-3 py-3 text-sm text-emerald-700">
+        <div className="absolute z-50 mt-2 w-full rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface)] px-3 py-3 text-sm text-[var(--sr-text-muted)]">
           No games found for &ldquo;{query}&rdquo;
         </div>
       )}

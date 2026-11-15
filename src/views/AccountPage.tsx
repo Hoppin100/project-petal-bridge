@@ -53,11 +53,11 @@ export function AccountPage() {
     return () => { current = false; clearTimeout(t); };
   }, [username, profile]);
 
-  if (loading) return <div className="sr-container py-20 text-center text-emerald-700">Loading…</div>;
+  if (loading) return <div className="sr-container py-20 text-center text-[var(--sr-text-muted)]">Loading…</div>;
 
   if (!session) {
     return (
-      <div className="sr-container py-20 text-center text-emerald-100">
+      <div className="sr-container py-20 text-center text-[var(--sr-text)]">
         Sign in to manage your account.
       </div>
     );
@@ -141,7 +141,7 @@ export function AccountPage() {
 
       <form onSubmit={handleSave} className="sr-panel flex flex-col gap-5 p-4 sm:p-6">
         <div>
-          <label htmlFor="account-username" className="mb-1 block text-sm font-medium text-emerald-100">
+          <label htmlFor="account-username" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
             Username
           </label>
           <input
@@ -155,10 +155,10 @@ export function AccountPage() {
           <p
             className={`mt-1 flex items-center gap-1 text-xs ${
               usernameHelp.ok === true
-                ? 'text-emerald-400'
+                ? 'text-[var(--sr-primary)]'
                 : usernameHelp.ok === false
-                ? 'text-red-400'
-                : 'text-emerald-700'
+                ? 'text-[var(--sr-danger)]'
+                : 'text-[var(--sr-text-muted)]'
             }`}
           >
             {usernameHelp.ok === true && <Check className="h-3 w-3" />}
@@ -168,7 +168,7 @@ export function AccountPage() {
         </div>
 
         <div>
-          <label htmlFor="account-bio" className="mb-1 block text-sm font-medium text-emerald-100">
+          <label htmlFor="account-bio" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
             Bio
           </label>
           <textarea
@@ -182,7 +182,7 @@ export function AccountPage() {
         </div>
 
         <div>
-          <label htmlFor="account-avatar-url" className="mb-1 block text-sm font-medium text-emerald-100">
+          <label htmlFor="account-avatar-url" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
             Profile picture
           </label>
           <input
@@ -206,12 +206,12 @@ export function AccountPage() {
         </div>
 
         {error && (
-          <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+          <div role="alert" className="border-l-2 border-[var(--sr-danger)] bg-[var(--sr-bad-bg)] px-3 py-2 text-sm text-[var(--sr-danger)]">
             {error}
           </div>
         )}
         {success && (
-          <div role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+          <div role="status" className="border-l-2 border-[var(--sr-primary)] bg-[var(--sr-ok-bg)] px-3 py-2 text-sm text-[var(--sr-text)]">
             {success}
           </div>
         )}
@@ -223,13 +223,13 @@ export function AccountPage() {
       </form>
 
       {profile?.role === 'owner' && (
-        <div className="mt-8 rounded-lg border border-[var(--sr-primary)]/30 bg-[var(--sr-primary)]/10 p-4 text-sm text-emerald-200">
+        <div className="mt-8 rounded-md border border-[var(--sr-primary)]/30 bg-[var(--sr-primary)]/10 p-4 text-sm text-[var(--sr-text-dim)]">
           You have owner privileges. You can verify and reject runs, manage
           reference examples, and review AI assessments from the dashboard.
         </div>
       )}
       {profile?.role === 'moderator' && (
-        <div className="mt-8 rounded-lg border border-[var(--sr-primary)]/30 bg-[var(--sr-primary)]/10 p-4 text-sm text-emerald-200">
+        <div className="mt-8 rounded-md border border-[var(--sr-primary)]/30 bg-[var(--sr-primary)]/10 p-4 text-sm text-[var(--sr-text-dim)]">
           You have moderator privileges and can preview game pages hidden from the public.
         </div>
       )}

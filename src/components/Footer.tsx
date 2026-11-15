@@ -5,23 +5,69 @@ import { linkHref } from '@/lib/router';
 export function Footer({ launchLocked = false }: { launchLocked?: boolean }) {
   const { profile } = useAuth();
 
+  const internalLinks = [
+    { label: 'Home', href: linkHref('/') },
+    ...(!launchLocked
+      ? [
+          { label: 'Games', href: linkHref('/games') },
+          ...(profile?.role === 'owner'
+            ? [{ label: 'Daily Challenge', href: linkHref('/daily-challenge') }]
+            : []),
+          { label: 'Submit a run', href: linkHref('/submit') },
+          { label: 'Request a game', href: linkHref('/request-game') },
+        ]
+      : []),
+  ];
+
   return (
     <footer className="mt-auto border-t border-[var(--sr-border)] bg-[var(--sr-bg-2)]">
-      <div className="sr-container flex flex-col items-start justify-between gap-4 py-6 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-4">
+      <div className="sr-container grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
+        {/* Brand */}
+        <div className="min-w-0">
           <Logo size="sm" />
-          <span className="hidden text-xs text-[var(--sr-text-muted)] sm:inline">Speedrun leaderboards</span>
+          <p className="mt-3 max-w-xs text-xs leading-5 text-[var(--sr-text-muted)]">
+            Speedrun leaderboards with human-reviewed video proof. Every run is
+            checked before it counts.
+          </p>
         </div>
-        <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-[var(--sr-text-muted)]">
-          <a href={linkHref('/')} className="transition-colors hover:text-[var(--sr-primary)]">Home</a>
-          <a href="https://discord.gg/JySJqfagAq" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[var(--sr-primary)]">Join our Discord</a>
-          <a href="https://www.youtube.com/@SplitRushOffical" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[var(--sr-primary)]">YouTube</a>
-          {!launchLocked && <>
-            <a href={linkHref('/games')} className="transition-colors hover:text-[var(--sr-primary)]">Games</a>
-            {profile?.role === 'owner' && <a href={linkHref('/daily-challenge')} className="transition-colors hover:text-[var(--sr-primary)]">Daily Challenge</a>}
-            <a href={linkHref('/submit')} className="transition-colors hover:text-[var(--sr-primary)]">Submit a run</a>
-          </>}
+
+        {/* Site links */}
+        <nav aria-label="Footer navigation">
+          <p className="sr-stat-label">Leaderboards</p>
+          <ul className="mt-3 space-y-2 text-sm">
+            {internalLinks.map((link) => (
+              <li key={link.label}>
+                <a href={link.href} className="text-[var(--sr-text-dim)] transition-colors hover:text-[var(--sr-primary)]">
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
         </nav>
+
+        {/* Community */}
+        <nav aria-label="Community links">
+          <p className="sr-stat-label">Community</p>
+          <ul className="mt-3 space-y-2 text-sm">
+            <li>
+              <a href="https://discord.gg/JySJqfagAq" target="_blank" rel="noopener noreferrer" className="text-[var(--sr-text-dim)] transition-colors hover:text-[var(--sr-primary)]">
+                Discord
+              </a>
+            </li>
+            <li>
+              <a href="https://www.youtube.com/@SplitRushOffical" target="_blank" rel="noopener noreferrer" className="text-[var(--sr-text-dim)] transition-colors hover:text-[var(--sr-primary)]">
+                YouTube
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+
+      <div className="border-t border-[var(--sr-border)]">
+        <div className="sr-container flex flex-col gap-1 py-4 text-xs text-[var(--sr-text-muted)] sm:flex-row sm:items-center sm:justify-between">
+          <span>© {new Date().getFullYear()} SplitRush</span>
+          <span>Times are verified by owners before they hit the board.</span>
+        </div>
       </div>
     </footer>
   );

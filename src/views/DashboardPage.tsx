@@ -303,7 +303,7 @@ export function DashboardPage() {
   if (authLoading) {
     return (
       <div className="sr-container py-20 text-center">
-        <p className="text-emerald-700">Loading…</p>
+        <p className="text-[var(--sr-text-muted)]">Loading…</p>
       </div>
     );
   }
@@ -311,7 +311,7 @@ export function DashboardPage() {
   if (!session) {
     return (
       <div className="sr-container py-20 text-center">
-        <p className="text-emerald-100">Sign in to access the dashboard.</p>
+        <p className="text-[var(--sr-text)]">Sign in to access the dashboard.</p>
       </div>
     );
   }
@@ -319,9 +319,9 @@ export function DashboardPage() {
   if (profile?.role !== 'owner') {
     return (
       <div className="sr-container py-20 text-center">
-        <ShieldCheck className="mx-auto h-12 w-12 text-emerald-800" />
-        <h1 className="mt-4 text-2xl font-bold text-emerald-50">Owners only</h1>
-        <p className="mt-2 text-sm text-emerald-700">
+        <ShieldCheck className="mx-auto h-12 w-12 text-[var(--sr-text-muted)]" />
+        <h1 className="mt-4 text-2xl font-bold text-[var(--sr-text)]">Owners only</h1>
+        <p className="mt-2 text-sm text-[var(--sr-text-muted)]">
           The verification dashboard is restricted to authorized owner accounts.
         </p>
       </div>
@@ -339,19 +339,19 @@ export function DashboardPage() {
           <ShieldCheck className="h-7 w-7 text-[var(--sr-primary)]" />
           Verification Dashboard
         </h1>
-        <p className="mt-1 text-sm text-emerald-700">
+        <p className="mt-1 text-sm text-[var(--sr-text-muted)]">
           Review submissions with the SplitRush Verification Assistant.
         </p>
       </div>
 
-      {actionError && <p role="alert" className="mb-4 border-l-2 border-red-400 px-3 py-2 text-sm text-red-300">{actionError}</p>}
+      {actionError && <p role="alert" className="mb-4 border-l-2 border-[var(--sr-danger)] px-3 py-2 text-sm text-[var(--sr-danger)]">{actionError}</p>}
 
       {/* Stats */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <StatCard label="Pending" value={stats.pending} color="text-yellow-400" />
-        <StatCard label="Verified" value={stats.verified} color="text-emerald-400" />
-        <StatCard label="Rejected" value={stats.rejected} color="text-red-400" />
-        <StatCard label="Reference examples" value={stats.refs} color="text-blue-400" />
+        <StatCard label="Pending" value={stats.pending} color="text-[var(--sr-warn)]" />
+        <StatCard label="Verified" value={stats.verified} color="text-[var(--sr-primary)]" />
+        <StatCard label="Rejected" value={stats.rejected} color="text-[var(--sr-danger)]" />
+        <StatCard label="Reference examples" value={stats.refs} color="text-[var(--sr-link)]" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -360,7 +360,7 @@ export function DashboardPage() {
           <div className="mb-3 flex gap-2 rounded-sm border border-[var(--sr-border)] bg-[var(--sr-surface)] p-1">
             <button
               onClick={() => setTab('pending')}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
                 tab === 'pending'
                   ? 'bg-[var(--sr-primary)] text-[#06110a]'
                   : 'text-[var(--sr-text-dim)] hover:bg-[var(--sr-surface-2)]'
@@ -370,7 +370,7 @@ export function DashboardPage() {
             </button>
             <button
               onClick={() => setTab('history')}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
                 tab === 'history'
                   ? 'bg-[var(--sr-primary)] text-[#06110a]'
                   : 'text-[var(--sr-text-dim)] hover:bg-[var(--sr-surface-2)]'
@@ -386,7 +386,7 @@ export function DashboardPage() {
             </div>
           ) : tab === 'pending' ? (
             pendingRuns.length === 0 ? (
-              <div className="sr-card p-6 text-center text-sm text-emerald-700">
+              <div className="sr-card p-6 text-center text-sm text-[var(--sr-text-muted)]">
                 No pending submissions. All caught up!
               </div>
             ) : (
@@ -406,7 +406,7 @@ export function DashboardPage() {
               </div>
             )
           ) : recentRuns.length === 0 ? (
-            <div className="sr-card p-6 text-center text-sm text-emerald-700">
+            <div className="sr-card p-6 text-center text-sm text-[var(--sr-text-muted)]">
               No reviewed runs yet.
             </div>
           ) : (
@@ -431,9 +431,9 @@ export function DashboardPage() {
         <div className="lg:col-span-2">
           {!selectedRun ? (
             <div className="sr-card flex flex-col items-center justify-center p-12 text-center">
-              <Brain className="h-12 w-12 text-emerald-800" />
-              <p className="mt-3 text-emerald-100">Select a submission to review</p>
-              <p className="text-sm text-emerald-700">
+              <Brain className="h-12 w-12 text-[var(--sr-text-muted)]" />
+              <p className="mt-3 text-[var(--sr-text)]">Select a submission to review</p>
+              <p className="text-sm text-[var(--sr-text-muted)]">
                 View the AI assessment, watch the proof video, and make a decision.
               </p>
             </div>
@@ -478,9 +478,9 @@ export function DashboardPage() {
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="sr-card p-4">
-      <p className={`text-2xl font-bold ${color}`}>{value}</p>
-      <p className="text-xs text-emerald-700">{label}</p>
+    <div className="sr-panel p-4">
+      <p className={`sr-stat-value ${color}`}>{value}</p>
+      <p className="sr-stat-label mt-1">{label}</p>
     </div>
   );
 }
@@ -504,9 +504,9 @@ function RunListItem({
 }) {
   const recIcon = assessment ? recIconFor(assessment.recommendation) : null;
   const statusBadge = {
-    pending: 'bg-yellow-500/20 text-yellow-400',
-    verified: 'bg-emerald-500/20 text-emerald-400',
-    rejected: 'bg-red-500/20 text-red-400',
+    pending: 'sr-badge-pending',
+    verified: 'sr-badge-ok',
+    rejected: 'sr-badge-rejected',
   }[run.status];
 
   return (
@@ -519,19 +519,19 @@ function RunListItem({
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-sm font-semibold text-emerald-50">
+        <span className="truncate text-sm font-semibold text-[var(--sr-text)]">
           {game?.title ?? 'Unknown game'}
         </span>
         <span className={`sr-badge ${statusBadge} capitalize flex-shrink-0`}>
           {run.status}
         </span>
       </div>
-      <div className="mt-1 flex items-center gap-2 text-xs text-emerald-700">
+      <div className="mt-1 flex items-center gap-2 text-xs text-[var(--sr-text-muted)]">
         <span>{category?.name}</span>
         <span>·</span>
         <span>{runner?.username ?? 'Unknown'}</span>
         <span>·</span>
-        <span className="font-mono text-emerald-100">{formatTime(run.time_ms)}</span>
+        <span className="sr-mono text-[var(--sr-text)]">{formatTime(run.time_ms)}</span>
       </div>
       {assessment && recIcon && (
         <div className="mt-2 flex items-center gap-1 text-xs">
@@ -540,7 +540,7 @@ function RunListItem({
             {recLabelFor(assessment.recommendation)}
           </span>
           {assessment.confidence !== null && (
-            <span className="text-emerald-800">
+            <span className="text-[var(--sr-text-muted)]">
               · {(assessment.confidence * 100).toFixed(0)}% conf.
             </span>
           )}
@@ -605,43 +605,43 @@ function RunDetailPanel({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-xl font-bold text-emerald-50">
+              <h2 className="text-xl font-bold text-[var(--sr-text)]">
                 {game?.title ?? 'Unknown game'}
               </h2>
               {game && (
                 <a
                   href={linkHref(`/games/${game.slug}`)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--sr-primary)] hover:text-white"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--sr-primary)] hover:text-[var(--sr-text)]"
                 >
                   View game page
                   <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" />
                 </a>
               )}
             </div>
-            <p className="text-sm text-emerald-700">
+            <p className="text-sm text-[var(--sr-text-muted)]">
               {category?.name} · {runner?.username ?? 'Unknown runner'}
             </p>
           </div>
           <div className="text-right">
-            <p className="font-mono text-2xl font-bold text-[var(--sr-primary)]">
+            <p className="sr-mono text-2xl font-bold text-[var(--sr-primary)]">
               {formatTime(run.time_ms)}
             </p>
-            <p className="text-xs text-emerald-700">
+            <p className="text-xs text-[var(--sr-text-muted)]">
               {run.platform} · {timeAgo(run.created_at)}
             </p>
           </div>
         </div>
         {category?.timing_rules && (
-          <div className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--sr-border)] bg-[var(--sr-surface-2)] p-3 text-sm text-emerald-100/80">
+          <div className="mt-3 flex items-start gap-2 rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface-2)] p-3 text-sm text-[var(--sr-text-dim)]">
             <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--sr-primary)]" />
             <div>
-              <span className="font-semibold text-emerald-50">Category rules: </span>
+              <span className="font-semibold text-[var(--sr-text)]">Category rules: </span>
               {category.timing_rules}
             </div>
           </div>
         )}
         {run.notes && (
-          <p className="mt-3 text-sm text-emerald-100/70">
+          <p className="mt-3 text-sm text-[var(--sr-text-dim)]">
             <span className="font-semibold">Runner notes: </span>
             {run.notes}
           </p>
@@ -652,12 +652,12 @@ function RunDetailPanel({
       <div className="sr-card overflow-hidden p-4">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <Youtube className="h-5 w-5 text-red-500" />
-          <h3 className="font-semibold text-emerald-50">Video proof</h3>
+          <h3 className="font-semibold text-[var(--sr-text)]">Video proof</h3>
           <a
             href={run.video_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-auto min-h-10 text-sm text-[var(--sr-primary)] hover:text-emerald-300"
+            className="ml-auto min-h-10 text-sm text-[var(--sr-primary)] hover:text-[var(--sr-link)]"
           >
             Open on YouTube
           </a>
@@ -678,7 +678,7 @@ function RunDetailPanel({
           </div>
         )}
         {videoId ? (
-          <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
+          <div className="aspect-video w-full overflow-hidden rounded-md bg-black">
             <iframe
               src={embedUrl}
               title="Run proof"
@@ -687,7 +687,7 @@ function RunDetailPanel({
             />
           </div>
         ) : (
-          <p className="text-sm text-red-400">
+          <p className="text-sm text-[var(--sr-danger)]">
             Invalid YouTube URL. Cannot embed video.
           </p>
         )}
@@ -699,10 +699,10 @@ function RunDetailPanel({
       ) : (
         <div className="sr-card p-5">
           <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-emerald-800" />
-            <h3 className="font-semibold text-emerald-50">AI Assessment</h3>
+            <Brain className="h-5 w-5 text-[var(--sr-text-muted)]" />
+            <h3 className="font-semibold text-[var(--sr-text)]">AI Assessment</h3>
           </div>
-          <p className="mt-2 text-sm text-emerald-700">
+          <p className="mt-2 text-sm text-[var(--sr-text-muted)]">
             No AI assessment yet. The assistant will evaluate this run when
             triggered, or you can review it manually.
           </p>
@@ -723,14 +723,14 @@ function RunDetailPanel({
 
       {/* Owner actions */}
       <div className="sr-card p-5">
-        <h3 className="mb-3 flex items-center gap-2 font-semibold text-emerald-50">
+        <h3 className="mb-3 flex items-center gap-2 font-semibold text-[var(--sr-text)]">
           <ShieldCheck className="h-5 w-5 text-[var(--sr-primary)]" />
           Owner decision
         </h3>
 
         {run.status === 'pending' ? (
           <>
-            <p className="mb-3 text-xs text-emerald-700">
+            <p className="mb-3 text-xs text-[var(--sr-text-muted)]">
               Your verify or reject decision, including the rejection reason, becomes a labeled example for future AI reviews of this game and category.
             </p>
             <div className="flex flex-wrap gap-3">
@@ -749,7 +749,7 @@ function RunDetailPanel({
               <button
                 onClick={onReject}
                 disabled={actionLoading || !rejectReason.trim()}
-                className="sr-btn-ghost border-red-500/30 text-red-400 hover:bg-red-500/10"
+                className="sr-btn-ghost border-[var(--sr-danger)]/40 text-[var(--sr-danger)] hover:bg-[var(--sr-bad-bg)]"
               >
                 {actionLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -760,7 +760,7 @@ function RunDetailPanel({
               </button>
             </div>
             <div className="mt-3">
-              <label className="mb-1 block text-xs text-emerald-700">
+              <label className="mb-1 block text-xs text-[var(--sr-text-muted)]">
                 Rejection reason (required to reject)
               </label>
               <input
@@ -774,11 +774,11 @@ function RunDetailPanel({
           </>
         ) : (
           <div className="flex items-center gap-2 text-sm">
-            <span className="sr-badge capitalize bg-[var(--sr-surface-2)] text-emerald-100">
+            <span className="sr-badge capitalize bg-[var(--sr-surface-2)] text-[var(--sr-text)]">
               {run.status}
             </span>
             {run.rejection_reason && (
-              <span className="text-red-400">Reason: {run.rejection_reason}</span>
+              <span className="text-[var(--sr-danger)]">Reason: {run.rejection_reason}</span>
             )}
           </div>
         )}
@@ -786,7 +786,7 @@ function RunDetailPanel({
         <button
           onClick={onDelete}
           disabled={actionLoading}
-          className="sr-btn-ghost mt-4 border-red-500/30 text-red-400 hover:bg-red-500/10"
+          className="sr-btn-ghost mt-4 border-[var(--sr-danger)]/40 text-[var(--sr-danger)] hover:bg-[var(--sr-bad-bg)]"
         >
           <Trash2 className="h-4 w-4" />
           Delete run permanently
@@ -795,8 +795,8 @@ function RunDetailPanel({
         {/* Reference example management */}
         <div className="mt-4 border-t border-[var(--sr-border)] pt-4">
           <div className="flex items-center justify-between">
-            <h4 className="flex items-center gap-1.5 text-sm font-semibold text-emerald-100">
-              <Star className="h-4 w-4 text-yellow-400" />
+            <h4 className="flex items-center gap-1.5 text-sm font-semibold text-[var(--sr-text)]">
+              <Star className="h-4 w-4 text-[var(--sr-warn)]" />
               Reference example
             </h4>
             <button
@@ -804,14 +804,14 @@ function RunDetailPanel({
               disabled={actionLoading}
               className={`text-xs font-semibold ${
                 refExample
-                  ? 'text-red-400 hover:text-red-300'
-                  : 'text-[var(--sr-primary)] hover:text-emerald-300'
+                  ? 'text-[var(--sr-danger)] hover:text-[var(--sr-danger)]'
+                  : 'text-[var(--sr-primary)] hover:text-[var(--sr-link)]'
               }`}
             >
               {refExample ? 'Remove as reference' : 'Mark as reference'}
             </button>
           </div>
-          <p className="mt-1 text-xs text-emerald-700">
+          <p className="mt-1 text-xs text-[var(--sr-text-muted)]">
             {refExample
               ? `Labeled as "${refExample.label}". Used by the AI as a training example.`
               : 'Marking this run as a reference example helps the AI learn what compliant runs look like for this game and category.'}
@@ -831,8 +831,8 @@ function RunDetailPanel({
       {/* Assessment history */}
       {history.length > 0 && (
         <div className="sr-card p-5">
-          <h3 className="mb-3 flex items-center gap-2 font-semibold text-emerald-50">
-            <History className="h-5 w-5 text-emerald-700" />
+          <h3 className="mb-3 flex items-center gap-2 font-semibold text-[var(--sr-text)]">
+            <History className="h-5 w-5 text-[var(--sr-text-muted)]" />
             Assessment history
           </h3>
           <div className="flex flex-col gap-2">
@@ -841,8 +841,8 @@ function RunDetailPanel({
                 key={h.id}
                 className="flex items-center justify-between border-b border-[var(--sr-border)]/50 pb-2 text-sm last:border-0"
               >
-                <span className="text-emerald-100">{formatAction(h.action)}</span>
-                <span className="text-xs text-emerald-700">
+                <span className="text-[var(--sr-text)]">{formatAction(h.action)}</span>
+                <span className="text-xs text-[var(--sr-text-muted)]">
                   {timeAgo(h.created_at)}
                 </span>
               </div>
@@ -885,7 +885,7 @@ function AssessmentCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-[var(--sr-primary)]" />
-          <h3 className="font-semibold text-emerald-50">
+          <h3 className="font-semibold text-[var(--sr-text)]">
             SplitRush Verification Assistant
           </h3>
         </div>
@@ -900,28 +900,28 @@ function AssessmentCard({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <span className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold bg-[var(--sr-surface-2)]">
+        <span className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold bg-[var(--sr-surface-2)]">
           {recIcon}
           <span className={recColorFor(assessment.recommendation)}>
             {recLabelFor(assessment.recommendation)}
           </span>
         </span>
         {assessment.confidence !== null && (
-          <span className="text-xs text-emerald-700">
+          <span className="text-xs text-[var(--sr-text-muted)]">
             Confidence: {(assessment.confidence * 100).toFixed(0)}%
           </span>
         )}
-        <span className="text-xs text-emerald-700">Basis: {basisLabel}</span>
-        <span className="text-xs text-emerald-800">
+        <span className="text-xs text-[var(--sr-text-muted)]">Basis: {basisLabel}</span>
+        <span className="text-xs text-[var(--sr-text-muted)]">
           Model: {assessment.model_version}
         </span>
       </div>
 
-      <div className="mt-3 whitespace-pre-wrap rounded-lg border border-[var(--sr-border)] bg-[var(--sr-surface-2)] p-3 text-sm text-emerald-100/80">
+      <div className="mt-3 whitespace-pre-wrap rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface-2)] p-3 text-sm text-[var(--sr-text-dim)]">
         {assessment.explanation}
       </div>
 
-      <p className="mt-3 text-xs text-emerald-800">
+      <p className="mt-3 text-xs text-[var(--sr-text-muted)]">
         {assessment.evidence_basis === 'video_analysis'
           ? 'Gemini reviewed sampled frames from this video and available approved/rejected examples for this game/category. Your past review decisions inform future assessments, but do not train or change the model itself. Sampling may miss events; the assistant cannot approve runs.'
           : 'No video frames were analyzed. Configure GEMINI_API_KEY and use a public YouTube video for visual review. Metadata and statistics are not proof.'}{' '}
@@ -933,16 +933,16 @@ function AssessmentCard({
 
 function recIconFor(rec: Recommendation) {
   if (rec === 'likely_consistent')
-    return <TrendingUp className="h-4 w-4 text-emerald-400" />;
+    return <TrendingUp className="h-4 w-4 text-[var(--sr-primary)]" />;
   if (rec === 'needs_review')
-    return <HelpCircle className="h-4 w-4 text-yellow-400" />;
-  return <AlertTriangle className="h-4 w-4 text-red-400" />;
+    return <HelpCircle className="h-4 w-4 text-[var(--sr-warn)]" />;
+  return <AlertTriangle className="h-4 w-4 text-[var(--sr-danger)]" />;
 }
 
 function recColorFor(rec: Recommendation): string {
-  if (rec === 'likely_consistent') return 'text-emerald-400';
-  if (rec === 'needs_review') return 'text-yellow-400';
-  return 'text-red-400';
+  if (rec === 'likely_consistent') return 'text-[var(--sr-primary)]';
+  if (rec === 'needs_review') return 'text-[var(--sr-warn)]';
+  return 'text-[var(--sr-danger)]';
 }
 
 function recLabelFor(rec: Recommendation): string {

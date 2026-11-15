@@ -20,7 +20,7 @@ export function LaunchCountdown({
   return (
     <section className="sr-container py-10">
       <div className="sr-panel mx-auto max-w-3xl px-6 py-10 text-center">
-        <p className="text-sm font-bold uppercase text-[var(--sr-link)]">Coming soon</p>
+        <p className="sr-eyebrow">Coming soon</p>
         <h1 className="mt-2 text-3xl font-extrabold text-[var(--sr-text)]">
           SplitRush opens November 7
         </h1>
@@ -40,9 +40,9 @@ export function LaunchCountdown({
           ].map(([label, value]) => (
             <div
               key={label}
-              className="rounded border border-[var(--sr-border)] bg-[var(--sr-bg-2)] px-3 py-4"
+              className="rounded-md border border-[var(--sr-border)] bg-[var(--sr-bg-2)] px-3 py-4"
             >
-              <p className="text-4xl font-bold tabular-nums text-[var(--sr-text)]">
+              <p className="sr-mono text-4xl font-bold text-[var(--sr-text)]">
                 {String(value).padStart(2, '0')}
               </p>
               <p className="mt-2 text-xs font-medium uppercase tracking-widest text-[var(--sr-text-muted)]">

@@ -168,7 +168,7 @@ export function ManageGamesPage() {
   if (authLoading) {
     return (
       <div className="sr-container py-20 text-center">
-        <p className="text-emerald-700">Loading…</p>
+        <p className="text-[var(--sr-text-muted)]">Loading…</p>
       </div>
     );
   }
@@ -176,7 +176,7 @@ export function ManageGamesPage() {
   if (!session) {
     return (
       <div className="sr-container py-20 text-center">
-        <p className="text-emerald-100">Sign in to manage games.</p>
+        <p className="text-[var(--sr-text)]">Sign in to manage games.</p>
       </div>
     );
   }
@@ -184,9 +184,9 @@ export function ManageGamesPage() {
   if (profile?.role !== 'owner') {
     return (
       <div className="sr-container py-20 text-center">
-        <Gamepad2 className="mx-auto h-12 w-12 text-emerald-800" />
-        <h1 className="mt-4 text-2xl font-bold text-emerald-50">Owners only</h1>
-        <p className="mt-2 text-sm text-emerald-700">
+        <Gamepad2 className="mx-auto h-12 w-12 text-[var(--sr-text-muted)]" />
+        <h1 className="mt-4 text-2xl font-bold text-[var(--sr-text)]">Owners only</h1>
+        <p className="mt-2 text-sm text-[var(--sr-text-muted)]">
           Only authorized owner accounts can create and manage game pages.
         </p>
       </div>
@@ -286,7 +286,7 @@ export function ManageGamesPage() {
       categories: subcategories,
     });
     setCategoryClipboardNotice(
-      `Copied ${subcategories.length} subcategor${subcategories.length === 1 ? 'y' : 'ies'} from "${game.title}" → "${parent.name}". Choose Paste on a destination category.`
+      `Copied ${subcategories.length} subcategor${subcategories.length === 1 ? 'y' : 'ies'} from "${game.title}" â†’ "${parent.name}". Choose Paste on a destination category.`
     );
   }
 
@@ -304,7 +304,7 @@ export function ManageGamesPage() {
       categories: [{ name: category.name, timing_rules: category.timing_rules }],
     });
     setCategoryClipboardNotice(
-      `Copied subcategory "${category.name}" from "${game.title}" → "${parent.name}". Choose Paste on a destination category.`
+      `Copied subcategory "${category.name}" from "${game.title}" â†’ "${parent.name}". Choose Paste on a destination category.`
     );
   }
 
@@ -440,7 +440,7 @@ export function ManageGamesPage() {
             <Gamepad2 className="h-7 w-7 text-[var(--sr-primary)]" />
             Manage Games
           </h1>
-          <p className="mt-1 text-sm text-emerald-700">
+          <p className="mt-1 text-sm text-[var(--sr-text-muted)]">
             Create game pages and categories that show up across SplitRush.
           </p>
         </div>
@@ -458,17 +458,17 @@ export function ManageGamesPage() {
 
       {requests.length > 0 && (
         <section className="sr-panel mb-6 p-4 sm:p-5">
-          <h2 className="mb-3 text-lg font-bold text-emerald-50">Pending game requests <span className="sr-badge ml-2 bg-[var(--sr-surface-2)] text-emerald-100">{requests.length}</span></h2>
+          <h2 className="mb-3 text-lg font-bold text-[var(--sr-text)]">Pending game requests <span className="sr-badge ml-2 bg-[var(--sr-surface-2)] text-[var(--sr-text)]">{requests.length}</span></h2>
           <div className="divide-y divide-[var(--sr-border)]">
             {requests.map((request) => (
               <div key={request.id} className="flex flex-col items-stretch gap-3 py-3 sm:flex-row sm:items-center">
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-emerald-100">{request.game_name}</p>
+                  <p className="font-semibold text-[var(--sr-text)]">{request.game_name}</p>
                   <a href={request.game_url} target="_blank" rel="noreferrer" className="break-all text-sm text-[var(--sr-primary)] hover:underline">{request.game_url}</a>
-                  <p className="text-xs text-emerald-700">Requested {new Date(request.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-[var(--sr-text-muted)]">Requested {new Date(request.created_at).toLocaleDateString()}</p>
                 </div>
                 <button onClick={() => void reviewRequest(request, 'reviewed')} className="sr-btn-ghost w-full sm:w-auto">Mark reviewed</button>
-                <button onClick={() => void reviewRequest(request, 'declined')} className="sr-btn-ghost w-full border-red-500/30 text-red-400 sm:w-auto">Decline</button>
+                <button onClick={() => void reviewRequest(request, 'declined')} className="sr-btn-ghost w-full border-[var(--sr-danger)]/40 text-[var(--sr-danger)] sm:w-auto">Decline</button>
               </div>
             ))}
           </div>
@@ -476,13 +476,13 @@ export function ManageGamesPage() {
       )}
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+        <div className="mb-4 flex items-center gap-2 rounded-md border border-[var(--sr-danger)]/40 bg-[var(--sr-bad-bg)] px-3 py-2 text-sm text-[var(--sr-danger)]">
           <AlertCircle className="h-4 w-4" />
           {error}
         </div>
       )}
       {categoryClipboardNotice && (
-        <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--sr-border)] bg-[var(--sr-surface)] px-3 py-2 text-sm text-emerald-100">
+        <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface)] px-3 py-2 text-sm text-[var(--sr-text)]">
           <span>{categoryClipboardNotice}</span>
           {subcategoryClipboard && (
             <button
@@ -505,9 +505,9 @@ export function ManageGamesPage() {
         </div>
       ) : games.length === 0 ? (
         <div className="sr-panel flex flex-col items-center gap-3 p-8 text-center sm:p-12">
-          <Gamepad2 className="h-12 w-12 text-emerald-800" />
-          <p className="text-emerald-100">No games yet</p>
-          <p className="text-sm text-emerald-700">
+          <Gamepad2 className="h-12 w-12 text-[var(--sr-text-muted)]" />
+          <p className="text-[var(--sr-text)]">No games yet</p>
+          <p className="text-sm text-[var(--sr-text-muted)]">
             Create your first game page to get leaderboards started.
           </p>
           <button
@@ -529,21 +529,21 @@ export function ManageGamesPage() {
             return (
               <div key={game.id} className="sr-card overflow-hidden">
                 <div className="flex flex-col items-stretch gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
-                  <div className="h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-[var(--sr-surface-2)]">
+                  <div className="h-16 w-24 flex-shrink-0 overflow-hidden rounded-md bg-[var(--sr-surface-2)]">
                     {game.cover_url && (
                       <img src={game.cover_url} alt="" className="h-full w-full object-cover" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="truncate font-bold text-emerald-50">{game.title}</h3>
+                      <h3 className="truncate font-bold text-[var(--sr-text)]">{game.title}</h3>
                       {game.is_featured && (
                         <span className="sr-badge bg-[var(--sr-primary)]/20 text-[var(--sr-primary)]">
                           Featured
                         </span>
                       )}
                       {game.is_hidden && (
-                        <span className="sr-badge bg-amber-500/15 text-amber-300">
+                        <span className="sr-badge sr-badge-pending">
                           Hidden from public
                         </span>
                       )}
@@ -553,11 +553,11 @@ export function ManageGamesPage() {
                         </span>
                       )}
                     </div>
-                    <p className="truncate text-xs text-emerald-700">
+                    <p className="truncate text-xs text-[var(--sr-text-muted)]">
                       /{game.slug} · {cats.filter((category) => !category.parent_category_id).length || '—'} categories
                     </p>
                     {game.blurb && (
-                      <p className="truncate text-sm text-emerald-100/60 mt-0.5">{game.blurb}</p>
+                      <p className="truncate text-sm text-[var(--sr-text)]/60 mt-0.5">{game.blurb}</p>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -573,14 +573,14 @@ export function ManageGamesPage() {
                         setEditingGame(game);
                         setShowGameModal(true);
                       }}
-                      className="rounded-lg p-2 text-emerald-700 hover:text-emerald-300"
+                      className="rounded-md p-2 text-[var(--sr-text-muted)] hover:text-[var(--sr-link)]"
                       title="Edit game"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteGame(game)}
-                      className="rounded-lg p-2 text-red-700 hover:text-red-400"
+                      className="rounded-md p-2 text-[var(--sr-danger)] hover:bg-[var(--sr-bad-bg)]"
                       title="Delete game"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -601,7 +601,7 @@ export function ManageGamesPage() {
                   <div className="border-t border-[var(--sr-border)] bg-[var(--sr-surface-2)] p-4">
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <h4 className="text-sm font-semibold text-emerald-100">Categories and subcategories</h4>
+                        <h4 className="text-sm font-semibold text-[var(--sr-text)]">Categories and subcategories</h4>
                         <p className="mt-0.5 max-w-2xl text-xs leading-5 text-[var(--sr-text-muted)]">Top-level categories appear as leaderboard tabs. Add subcategories for variants such as glitch rules or platform-specific boards.</p>
                         {reorderingGameId === game.id && (
                           <p role="status" className="mt-1 inline-flex items-center gap-1.5 text-xs text-[var(--sr-primary)]">
@@ -618,7 +618,7 @@ export function ManageGamesPage() {
                       </button>
                     </div>
                     {cats.length === 0 ? (
-                      <p className="text-sm text-emerald-700">
+                      <p className="text-sm text-[var(--sr-text-muted)]">
                         No categories yet. Add one so runners can submit runs.
                       </p>
                     ) : (
@@ -636,7 +636,7 @@ export function ManageGamesPage() {
                                   disabled={index === 0 || reorderingGameId === game.id}
                                   aria-label={`Move ${cat.name} up`}
                                   title="Move up"
-                                  className="rounded p-0.5 text-[var(--sr-text-muted)] hover:bg-[var(--sr-surface-3)] hover:text-[var(--sr-primary)] disabled:opacity-30"
+                                  className="rounded-md p-0.5 text-[var(--sr-text-muted)] hover:bg-[var(--sr-surface-3)] hover:text-[var(--sr-primary)] disabled:opacity-30"
                                 ><ArrowUp className="h-3.5 w-3.5" /></button>
                                 <button
                                   type="button"
@@ -644,19 +644,19 @@ export function ManageGamesPage() {
                                   disabled={index === cats.length - 1 || reorderingGameId === game.id}
                                   aria-label={`Move ${cat.name} down`}
                                   title="Move down"
-                                  className="rounded p-0.5 text-[var(--sr-text-muted)] hover:bg-[var(--sr-surface-3)] hover:text-[var(--sr-primary)] disabled:opacity-30"
+                                  className="rounded-md p-0.5 text-[var(--sr-text-muted)] hover:bg-[var(--sr-surface-3)] hover:text-[var(--sr-primary)] disabled:opacity-30"
                                 ><ArrowDown className="h-3.5 w-3.5" /></button>
                               </div>
-                              <span className="sr-mono flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm bg-[var(--sr-surface-2)] text-xs font-semibold text-[var(--sr-primary)]">{cat.parent_category_id ? '↳' : String(index + 1).padStart(2, '0')}</span>
+                              <span className="sr-mono flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm bg-[var(--sr-surface-2)] text-xs font-semibold text-[var(--sr-primary)]">{cat.parent_category_id ? 'â†³' : String(index + 1).padStart(2, '0')}</span>
                               <div className="min-w-0">
-                                <p className="text-sm font-semibold text-emerald-50">{cat.name}</p>
+                                <p className="text-sm font-semibold text-[var(--sr-text)]">{cat.name}</p>
                                 {cat.parent_category_id && (
                                   <p className="text-xs text-[var(--sr-text-muted)]">
                                     Subcategory of {cats.find((item) => item.id === cat.parent_category_id)?.name ?? 'unknown category'}
                                   </p>
                                 )}
                                 {cat.timing_rules && (
-                                  <p className="truncate text-xs text-emerald-700">
+                                  <p className="truncate text-xs text-[var(--sr-text-muted)]">
                                     {cat.timing_rules}
                                   </p>
                                 )}
@@ -668,7 +668,7 @@ export function ManageGamesPage() {
                                   <button
                                     type="button"
                                     onClick={() => copySubcategory(game, cat)}
-                                    className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
+                                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
                                     aria-label={`Copy subcategory ${cat.name}`}
                                     title="Copy subcategory"
                                   >
@@ -678,7 +678,7 @@ export function ManageGamesPage() {
                                   <button
                                     type="button"
                                     onClick={() => void duplicateSubcategory(cat, game.id)}
-                                    className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
+                                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
                                     aria-label={`Duplicate subcategory ${cat.name}`}
                                     title="Duplicate subcategory under the same main category"
                                   >
@@ -689,14 +689,14 @@ export function ManageGamesPage() {
                               )}
                               <button
                                 onClick={() => setShowCatModal({ gameId: game.id, cat, parentCategoryId: cat.parent_category_id })}
-                                className="rounded p-1.5 text-emerald-700 hover:text-emerald-300"
+                                className="rounded-md p-1.5 text-[var(--sr-text-muted)] hover:text-[var(--sr-link)]"
                                 aria-label={`Edit ${cat.parent_category_id ? 'subcategory' : 'category'} ${cat.name}`}
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDeleteCategory(cat, game.id)}
-                                className="rounded p-1.5 text-red-700 hover:text-red-400"
+                                className="rounded-md p-1.5 text-[var(--sr-danger)] hover:bg-[var(--sr-bad-bg)]"
                                 aria-label={`Delete ${cat.parent_category_id ? 'subcategory' : 'category'} ${cat.name}`}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -707,7 +707,7 @@ export function ManageGamesPage() {
                                     type="button"
                                     onClick={() => setShowCatModal({ gameId: game.id, cat: null, parentCategoryId: cat.id })}
                                     aria-label={`Add subcategory under ${cat.name}`}
-                                    className="rounded px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
+                                    className="rounded-md px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
                                   >
                                     Add subcategory
                                   </button>
@@ -717,7 +717,7 @@ export function ManageGamesPage() {
                                     disabled={!cats.some((category) => category.parent_category_id === cat.id)}
                                     title="Copy this category's subcategories"
                                     aria-label={`Copy subcategories from ${cat.name}`}
-                                    className="rounded px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="rounded-md px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)] disabled:cursor-not-allowed disabled:opacity-40"
                                   >
                                     <ClipboardCopy className="mr-1 inline h-3.5 w-3.5" />
                                     Copy
@@ -729,7 +729,7 @@ export function ManageGamesPage() {
                                       disabled={pastingIntoCategoryId !== null}
                                       title={`Paste copied subcategories from ${subcategoryClipboard.sourceGameTitle} > ${subcategoryClipboard.sourceCategoryName}`}
                                       aria-label={`Paste subcategories into ${cat.name}`}
-                                      className="rounded px-2 py-1 text-xs text-[var(--sr-primary)] hover:bg-[var(--sr-surface-2)] disabled:cursor-wait disabled:opacity-50"
+                                      className="rounded-md px-2 py-1 text-xs text-[var(--sr-primary)] hover:bg-[var(--sr-surface-2)] disabled:cursor-wait disabled:opacity-50"
                                     >
                                       {pastingIntoCategoryId === cat.id ? (
                                         <Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin" />
@@ -985,29 +985,29 @@ function GameModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="game-modal-title"
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--sr-border)] bg-[var(--sr-surface)] p-5 sr-fade-in sm:p-7"
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface)] p-5 sr-fade-in sm:p-7"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 id="game-modal-title" className="text-xl font-bold text-emerald-50">
+            <h2 id="game-modal-title" className="text-xl font-bold text-[var(--sr-text)]">
               {game ? 'Edit game' : 'New game'}
             </h2>
             <p className="mt-1 text-sm text-[var(--sr-text-muted)]">
               {game ? 'Update the details shown on this game page.' : 'Start with the name; optional details can be filled in later.'}
             </p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close game form" className="rounded-lg p-1 text-emerald-700 hover:text-emerald-300">
+          <button type="button" onClick={onClose} aria-label="Close game form" className="rounded-md p-1 text-[var(--sr-text-muted)] hover:text-[var(--sr-link)]">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <form onSubmit={handleSave} className="flex flex-col gap-4">
-          <section className="rounded-xl border border-[var(--sr-border)] bg-[var(--sr-surface-2)]/50 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-emerald-100">Game details</h3>
+          <section className="rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface-2)]/50 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-[var(--sr-text)]">Game details</h3>
             <div className="flex flex-col gap-4">
           <div>
-            <label htmlFor="game-title" className="mb-1 block text-sm font-medium text-emerald-100">
+            <label htmlFor="game-title" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
               Game name <span className="text-[var(--sr-primary)]">Required</span>
             </label>
             <input
@@ -1027,7 +1027,7 @@ function GameModal({
                 {speedrunLookup.status === 'error' && 'Could not check speedrun.com. You can still create the game.'}
                 {speedrunLookup.status === 'found' && (
                   <>
-                    <p className="mb-1 text-emerald-100">
+                    <p className="mb-1 text-[var(--sr-text)]">
                       {speedrunLookup.games.some((item) => item.exactMatch)
                         ? 'Exact game match found on speedrun.com:'
                         : 'No exact match found. Possible speedrun.com matches:'}
@@ -1049,7 +1049,7 @@ function GameModal({
           </div>
 
           <div>
-            <label htmlFor="game-slug" className="mb-1 block text-sm font-medium text-emerald-100">Page address</label>
+            <label htmlFor="game-slug" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">Page address</label>
             <div className="flex items-center gap-2">
               <span className="shrink-0 text-xs text-[var(--sr-text-muted)]">/games/</span>
               <input
@@ -1061,7 +1061,7 @@ function GameModal({
                   setSlugTouched(true);
                 }}
                 placeholder="game-name"
-                className="sr-input font-mono"
+                className="sr-input sr-mono"
                 aria-describedby="game-slug-help"
                 required
               />
@@ -1078,13 +1078,13 @@ function GameModal({
             </div>
           </section>
 
-          <section className="rounded-xl border border-[var(--sr-border)] bg-[var(--sr-surface-2)]/50 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-emerald-100">
+          <section className="rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface-2)]/50 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-[var(--sr-text)]">
               Page presentation <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
             </h3>
             <div className="flex flex-col gap-4">
           <div>
-            <label htmlFor="game-cover" className="mb-1 block text-sm font-medium text-emerald-100">
+            <label htmlFor="game-cover" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
               Cover image URL <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
             </label>
             <input
@@ -1103,18 +1103,18 @@ function GameModal({
                 key={coverUrl}
                 src={coverUrl}
                 alt={`${title || 'Game'} cover preview`}
-                className="mt-2 h-24 w-40 rounded-lg object-cover border border-[var(--sr-border)]"
+                className="mt-2 h-24 w-40 rounded-md object-cover border border-[var(--sr-border)]"
                 onError={() => setCoverPreviewError(true)}
               />
             ) : (
-              <p className="mt-2 flex h-24 w-40 items-center justify-center rounded-lg border border-[var(--sr-border)] bg-[var(--sr-surface-2)] px-2 text-center text-xs text-[var(--sr-text-muted)]">
+              <p className="mt-2 flex h-24 w-40 items-center justify-center rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface-2)] px-2 text-center text-xs text-[var(--sr-text-muted)]">
                 {coverPreviewError ? 'Image could not be loaded' : 'Cover preview'}
               </p>
             )}
           </div>
 
           <div>
-            <label htmlFor="game-description" className="mb-1 block text-sm font-medium text-emerald-100">
+            <label htmlFor="game-description" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
               Short description <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
             </label>
             <textarea
@@ -1129,13 +1129,13 @@ function GameModal({
             </div>
           </section>
 
-          <section className="rounded-xl border border-[var(--sr-border)] bg-[var(--sr-surface-2)]/50 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-emerald-100">
+          <section className="rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface-2)]/50 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-[var(--sr-text)]">
               Links and visibility <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
             </h3>
             <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="game-page-url" className="mb-1 block text-sm font-medium text-emerald-100">
+            <label htmlFor="game-page-url" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
               Official game page <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
             </label>
             <input
@@ -1152,7 +1152,7 @@ function GameModal({
           </div>
 
           <div>
-            <label htmlFor="game-source" className="mb-1 block text-sm font-medium text-emerald-100">
+            <label htmlFor="game-source" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
               Platform <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
             </label>
             <input
@@ -1170,24 +1170,24 @@ function GameModal({
           </div>
             </div>
 
-          <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm text-emerald-100">
+          <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm text-[var(--sr-text)]">
             <input
               type="checkbox"
               checked={featured}
               onChange={(e) => setFeatured(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-[var(--sr-border)] accent-[var(--sr-primary)]"
+              className="mt-0.5 h-4 w-4 rounded-md border-[var(--sr-border)] accent-[var(--sr-primary)]"
             />
             <span>
               <span className="block font-medium">Feature on the homepage</span>
               <span className="text-xs text-[var(--sr-text-muted)]">Highlight this game in the featured games section.</span>
             </span>
           </label>
-          <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-emerald-100">
+          <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-[var(--sr-text)]">
             <input
               type="checkbox"
               checked={hidden}
               onChange={(e) => setHidden(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-[var(--sr-border)] accent-[var(--sr-primary)]"
+              className="mt-0.5 h-4 w-4 rounded-md border-[var(--sr-border)] accent-[var(--sr-primary)]"
             />
             <span>
               <span className="block font-medium">Hide game from public</span>
@@ -1199,9 +1199,9 @@ function GameModal({
           </section>
 
           {!game && (
-            <section className="rounded-xl border border-[var(--sr-border)] bg-[var(--sr-surface-2)]/50 p-4">
+            <section className="rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface-2)]/50 p-4">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold text-emerald-100">
+                <h3 className="text-sm font-semibold text-[var(--sr-text)]">
                   Leaderboard categories <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
                 </h3>
                 <span className="text-xs text-[var(--sr-text-muted)]">
@@ -1225,7 +1225,7 @@ function GameModal({
           )}
 
           {error && (
-            <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            <div role="alert" className="rounded-md border border-[var(--sr-danger)]/40 bg-[var(--sr-bad-bg)] px-3 py-2 text-sm text-[var(--sr-danger)]">
               {error}
             </div>
           )}
@@ -1392,24 +1392,24 @@ function CategoryModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="category-modal-title"
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[var(--sr-border)] bg-[var(--sr-surface)] p-5 sr-fade-in sm:p-6"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface)] p-5 sr-fade-in sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 id="category-modal-title" className="text-xl font-bold text-emerald-50">
+            <h2 id="category-modal-title" className="text-xl font-bold text-[var(--sr-text)]">
               {category ? (category.parent_category_id ? 'Edit subcategory' : 'Edit category') : 'New category'}
             </h2>
             <p className="mt-1 text-xs text-[var(--sr-text-muted)]">Choose how runners will find and compare these runs.</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close category form" className="rounded-lg p-1 text-emerald-700 hover:text-emerald-300">
+          <button type="button" onClick={onClose} aria-label="Close category form" className="rounded-md p-1 text-[var(--sr-text-muted)] hover:text-[var(--sr-link)]">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <form onSubmit={handleSave} className="flex flex-col gap-4">
           <div>
-            <label htmlFor="category-name" className="mb-1 block text-sm font-medium text-emerald-100">
+            <label htmlFor="category-name" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
               Category name <span className="text-[var(--sr-primary)]">Required</span>
             </label>
             <input
@@ -1422,13 +1422,13 @@ function CategoryModal({
               autoFocus
               required
             />
-            <p className="mt-1 text-xs text-emerald-700">
+            <p className="mt-1 text-xs text-[var(--sr-text-muted)]">
               Keep categories distinct; use one leaderboard format per category.
             </p>
           </div>
 
           <div>
-            <label htmlFor="category-rules" className="mb-1 block text-sm font-medium text-emerald-100">
+            <label htmlFor="category-rules" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
               Timing rules <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
             </label>
             <textarea
@@ -1445,8 +1445,8 @@ function CategoryModal({
           </div>
 
           {existingCategories.filter((item) => item.id !== category?.id).length > 0 && (
-            <fieldset className="rounded-lg border border-[var(--sr-border)] p-3">
-              <legend className="px-1 text-sm font-medium text-emerald-100">
+            <fieldset className="rounded-md border border-[var(--sr-border)] p-3">
+              <legend className="px-1 text-sm font-medium text-[var(--sr-text)]">
                 Use these timing rules for other categories
               </legend>
               <p className="mb-2 text-xs text-[var(--sr-text-muted)]">
@@ -1456,7 +1456,7 @@ function CategoryModal({
                 {existingCategories
                   .filter((item) => item.id !== category?.id)
                   .map((item) => (
-                    <label key={item.id} className="flex items-center gap-2 text-sm text-emerald-100">
+                    <label key={item.id} className="flex items-center gap-2 text-sm text-[var(--sr-text)]">
                       <input
                         type="checkbox"
                         checked={sharedCategoryIds.includes(item.id)}
@@ -1482,7 +1482,7 @@ function CategoryModal({
           )}
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-emerald-100" htmlFor="parent-category">
+            <label className="mb-1 block text-sm font-medium text-[var(--sr-text)]" htmlFor="parent-category">
               Category level
             </label>
             <select
@@ -1502,7 +1502,7 @@ function CategoryModal({
           </div>
 
           {error && (
-            <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            <div role="alert" className="rounded-md border border-[var(--sr-danger)]/40 bg-[var(--sr-bad-bg)] px-3 py-2 text-sm text-[var(--sr-danger)]">
               {error}
             </div>
           )}

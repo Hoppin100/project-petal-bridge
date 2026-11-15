@@ -144,8 +144,8 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   if (underConstruction) {
     return (
       <div className="sr-container py-20 text-center">
-        <Gamepad2 className="mx-auto h-12 w-12 text-emerald-800" />
-        <h1 className="mt-4 text-2xl font-bold text-emerald-50">
+        <Gamepad2 className="mx-auto h-12 w-12 text-[var(--sr-text-muted)]" />
+        <h1 className="mt-4 text-2xl font-bold text-[var(--sr-text)]">
           This page is under construction
         </h1>
         <p className="mx-auto mt-2 max-w-xl text-sm text-[var(--sr-text-muted)]">
@@ -174,8 +174,8 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   if (notFound || !game) {
     return (
       <div className="sr-container py-20 text-center">
-        <Trophy className="mx-auto h-12 w-12 text-emerald-800" />
-        <h1 className="mt-4 text-2xl font-bold text-emerald-50">Game not found</h1>
+        <Trophy className="mx-auto h-12 w-12 text-[var(--sr-text-muted)]" />
+        <h1 className="mt-4 text-2xl font-bold text-[var(--sr-text)]">Game not found</h1>
         <a href={linkHref('/games')} className="sr-btn-ghost mt-6">
           <ArrowLeft className="h-4 w-4" />
           Back to games
@@ -197,19 +197,19 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
 
   return (
     <div className="sr-container pb-12">
-      <section className="sr-panel my-6 p-4 sm:p-6">
-        <div className="mb-5 flex items-center justify-between">
+      <section className="border-b border-[var(--sr-border)] py-6">
+        <div className="mb-6 flex items-center justify-between">
           <a
             href={linkHref('/games')}
-            className="inline-flex items-center gap-1 text-sm text-[var(--sr-text-muted)] hover:text-white"
+            className="inline-flex items-center gap-1 text-sm text-[var(--sr-text-muted)] hover:text-[var(--sr-text)]"
           >
             <ArrowLeft className="h-4 w-4" />
             All games
           </a>
 
-          <span className="text-xs text-[var(--sr-text-muted)]">{game.source || 'Game leaderboard'}</span>
+          <span className="sr-mono text-xs text-[var(--sr-text-muted)]">{game.source || 'Game leaderboard'}</span>
         </div>
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             <div className="flex h-36 w-full flex-shrink-0 items-center justify-center overflow-hidden rounded-sm border border-[var(--sr-border)] bg-[var(--sr-surface-2)] text-[var(--sr-text-muted)] sm:h-40 sm:w-56">
               {game.cover_url ? (
                 <img
@@ -226,22 +226,22 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
                 {game.title}
               </h1>
               {comingSoon && (
-                <p className="mt-2 inline-flex rounded-sm bg-amber-400 px-2 py-1 text-xs font-bold uppercase tracking-wide text-black">
+                <p className="mt-2 inline-flex rounded-sm bg-[var(--sr-warn)] px-2 py-1 text-xs font-bold uppercase tracking-wide text-black">
                   Coming soon
                 </p>
               )}
               {game.blurb && (
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--sr-text-dim)]">
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--sr-text-dim)]">
                   {game.blurb}
                 </p>
               )}
-              <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
                 {comingSoon ? (
                   <div>
                     <button type="button" disabled className="sr-btn-primary cursor-not-allowed opacity-60">
                       Submit a run
                     </button>
-                    <p role="status" className="mt-2 text-sm text-amber-300">
+                    <p role="status" className="mt-2 text-sm text-[var(--sr-warn)]">
                       Cannot submit a run yet — {game.title} hasn’t been released.
                     </p>
                   </div>
@@ -262,10 +262,9 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
                   </a>
                 )}
                 {worldRecord && (
-                  <div className="flex items-center gap-2 border-l border-[var(--sr-border)] pl-3">
-                    <Medal className="h-4 w-4 text-[var(--sr-primary)]" />
+                  <div className="flex items-center gap-2 border-l-2 border-[var(--sr-primary)] pl-3">
                     <span className="text-xs text-[var(--sr-text-muted)]">Record</span>
-                    <span className="sr-mono font-semibold text-white">
+                    <span className="sr-mono text-lg font-semibold text-[var(--sr-text)]">
                       {formatTime(worldRecord.time_ms)}
                     </span>
                   </div>
@@ -301,8 +300,8 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
                   }}
                   className={`inline-flex flex-shrink-0 items-center gap-1 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
                     isActive
-                      ? 'border-[var(--sr-primary)] text-white'
-                      : 'border-transparent text-[var(--sr-text-muted)] hover:text-white'
+                      ? 'border-[var(--sr-primary)] text-[var(--sr-text)]'
+                      : 'border-transparent text-[var(--sr-text-muted)] hover:text-[var(--sr-text)]'
                   }`}
                 >
                   {category.name}
@@ -330,10 +329,10 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
                       type="button"
                       aria-pressed={activeCat === category.id}
                       onClick={() => setActiveCat(category.id)}
-                      className={`rounded border px-3 py-1.5 text-sm transition-colors ${
+                      className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
                         activeCat === category.id
-                          ? 'border-[var(--sr-primary)] bg-[var(--sr-primary)]/10 text-white'
-                          : 'border-[var(--sr-border)] text-[var(--sr-text-muted)] hover:border-[var(--sr-border-hover)] hover:text-white'
+                          ? 'border-[var(--sr-primary)] bg-[var(--sr-primary)]/10 text-[var(--sr-text)]'
+                          : 'border-[var(--sr-border)] text-[var(--sr-text-muted)] hover:border-[var(--sr-border-hover)] hover:text-[var(--sr-text)]'
                       }`}
                     >
                       {category.name}
@@ -347,7 +346,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
               <div className="mb-5 flex items-start gap-2 border-l-2 border-[var(--sr-border-hover)] bg-[var(--sr-surface)] px-3 py-2.5 text-sm text-[var(--sr-text-dim)]">
                 <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--sr-primary)]" />
                 <div>
-                  <span className="font-semibold text-white">
+                  <span className="font-semibold text-[var(--sr-text)]">
                     Timing rules:
                   </span>{' '}
                   {activeCategory.timing_rules}

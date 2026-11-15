@@ -224,7 +224,7 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sr-panel w-[calc(100%-2rem)] max-w-md gap-4 p-5 shadow-2xl sm:p-6">
+      <DialogContent className="sr-panel w-[calc(100%-2rem)] max-w-md gap-4 p-5 shadow-lg sm:p-6">
         <div className="mb-4 flex items-center justify-between pr-8">
           <div>
             <p className="sr-eyebrow">
@@ -242,7 +242,7 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {mode === 'signup' && (
             <div>
-              <label htmlFor="auth-username" className="mb-1 block text-sm font-medium text-emerald-100">
+              <label htmlFor="auth-username" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
                 Username
               </label>
               <input
@@ -258,10 +258,10 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
               <p
                 className={`mt-1 flex items-center gap-1 text-xs ${
                   usernameHelp.ok === true
-                    ? 'text-emerald-400'
+                    ? 'text-[var(--sr-primary)]'
                     : usernameHelp.ok === false
-                    ? 'text-red-400'
-                    : 'text-emerald-700'
+                    ? 'text-[var(--sr-danger)]'
+                    : 'text-[var(--sr-text-muted)]'
                 }`}
               >
                 {usernameHelp.ok === true && <Check className="h-3 w-3" />}
@@ -274,7 +274,7 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
           )}
 
           <div>
-            <label htmlFor="auth-email" className="mb-1 block text-sm font-medium text-emerald-100">
+            <label htmlFor="auth-email" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
               Email
             </label>
             <input
@@ -290,7 +290,7 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
           </div>
 
           <div>
-            <label htmlFor="auth-password" className="mb-1 block text-sm font-medium text-emerald-100">
+            <label htmlFor="auth-password" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
               Password
             </label>
             <input
@@ -306,13 +306,13 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
           </div>
 
           {notice && (
-            <div role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+            <div role="status" className="border-l-2 border-[var(--sr-primary)] bg-[var(--sr-ok-bg)] px-3 py-2 text-sm text-[var(--sr-text)]">
               {notice}
             </div>
           )}
 
           {error && (
-            <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            <div role="alert" className="border-l-2 border-[var(--sr-danger)] bg-[var(--sr-bad-bg)] px-3 py-2 text-sm text-[var(--sr-danger)]">
               {error}
             </div>
           )}
@@ -327,7 +327,7 @@ export function AuthModal({ mode, onClose, onSwitch }: AuthModalProps) {
           </button>
         </form>
 
-        <div className="mt-4 text-center text-sm text-emerald-700">
+        <div className="mt-4 text-center text-sm text-[var(--sr-text-muted)]">
           {mode === 'signup' ? (
             <>
               Already have an account?{' '}

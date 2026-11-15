@@ -28,7 +28,7 @@ export function ConfirmationDialog({
 }: ConfirmationDialogProps) {
   return (
     <AlertDialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="w-[calc(100%-2rem)] max-w-md border-[var(--sr-border)] bg-[var(--sr-surface)] p-5 shadow-2xl">
+      <AlertDialogContent className="w-[calc(100%-2rem)] max-w-md border-[var(--sr-border)] bg-[var(--sr-surface)] p-5 shadow-lg">
         <AlertDialogHeader className="space-y-2 text-left">
           <AlertDialogTitle className="text-[var(--sr-text)]">{title}</AlertDialogTitle>
           <AlertDialogDescription className="leading-6 text-[var(--sr-text-muted)]">

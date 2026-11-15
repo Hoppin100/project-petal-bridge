@@ -129,7 +129,7 @@ export function Navbar({ onOpenAuth, launchLocked = false }: NavbarProps) {
 
       {mobileOpen && (
         <div id="mobile-navigation" className="border-t border-[var(--sr-border)] bg-[var(--sr-bg-2)] md:hidden">
-          <div className="sr-container flex flex-col gap-3 border-t border-[var(--sr-border)] py-4">
+          <div className="sr-container flex flex-col gap-3 py-4">
             {!launchLocked && (
               <>
                 <SearchBar onNavigate={() => setMobileOpen(false)} />

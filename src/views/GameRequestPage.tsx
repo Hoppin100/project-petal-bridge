@@ -60,7 +60,7 @@ export function GameRequestPage({ onRequireAuth }: { onRequireAuth: () => void }
 
       {authLoading ? (
         <div className="mt-6">
-          <p className="text-sm text-emerald-700">Loading…</p>
+          <p className="text-sm text-[var(--sr-text-muted)]">Loading…</p>
         </div>
       ) : !session ? (
         <div className="mt-6 flex flex-col items-start gap-3 border-b border-[var(--sr-border)] pb-6 sm:flex-row sm:items-center sm:justify-between">
@@ -70,7 +70,7 @@ export function GameRequestPage({ onRequireAuth }: { onRequireAuth: () => void }
       ) : (
         <form onSubmit={submit} className="sr-panel mt-6 max-w-xl space-y-5 p-4 sm:p-6" aria-busy={busy}>
           {sent && (
-            <div role="status" className="flex items-start gap-2 border border-emerald-800 bg-emerald-950/40 p-3 text-sm text-emerald-200">
+            <div role="status" className="flex items-start gap-2 border border-[var(--sr-primary)]/40 bg-[var(--sr-ok-bg)] p-3 text-sm text-[var(--sr-text-dim)]">
               <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
               <span>Request sent. Thanks for helping build the game library.</span>
             </div>
@@ -110,7 +110,7 @@ export function GameRequestPage({ onRequireAuth }: { onRequireAuth: () => void }
               aria-invalid={Boolean(error)}
             />
             <p id="request-game-url-help" className="mt-1.5 text-xs text-[var(--sr-text-muted)]">A store page or official game site works well.</p>
-            {error && <p id="request-game-url-error" role="alert" className="mt-1.5 text-sm text-red-400">{error}</p>}
+            {error && <p id="request-game-url-error" role="alert" className="mt-1.5 text-sm text-[var(--sr-danger)]">{error}</p>}
           </div>
           <button disabled={busy || !profile} className="sr-btn-primary" type="submit">
             <Send aria-hidden="true" className="h-4 w-4" />

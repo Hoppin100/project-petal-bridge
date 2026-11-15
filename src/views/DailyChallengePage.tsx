@@ -140,7 +140,7 @@ export function DailyChallengePage() {
         </div>
       ) : error ? (
         <div className="sr-panel p-6 text-center">
-          <p role="alert" className="text-sm text-red-300">
+          <p role="alert" className="text-sm text-[var(--sr-danger)]">
             The daily challenge could not be loaded. Please try again.
           </p>
           <button type="button" onClick={() => void loadChallenge()} className="sr-btn-ghost mt-4">

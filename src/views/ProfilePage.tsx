@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Trophy, Clock, ExternalLink, Calendar } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { Profile, Run, Game, Category } from '@/lib/types';
 import { formatTime, timeAgo } from '@/lib/format';
 import { linkHref } from '@/lib/router';
 import { Avatar } from '@/components/Avatar';
+import { compareRunTimes, isSlowerIsBetterGame } from '@/lib/game-rules';
 
 interface ProfilePageProps {
   username: string;
@@ -79,6 +80,31 @@ export function ProfilePage({ username }: ProfilePageProps) {
     return () => { current = false; };
   }, [username]);
 
+  const verifiedRuns = useMemo(() => runs.filter((r) => r.status === 'verified'), [runs]);
+  const pendingRuns = useMemo(() => runs.filter((r) => r.status === 'pending'), [runs]);
+  const rejectedRuns = useMemo(() => runs.filter((r) => r.status === 'rejected'), [runs]);
+
+  // Best verified time per game + category, computed from the runs already loaded.
+  const personalBests = useMemo(() => {
+    const isOwner = profile?.role === 'owner';
+    const best = new Map<string, { run: Run; game: Game | undefined; cat: Category | undefined }>();
+    for (const run of verifiedRuns) {
+      const game = gameMap[run.game_id];
+      const slowerIsBetter = isOwner && game ? isSlowerIsBetterGame(game, true) : false;
+      const key = `${run.game_id}:${run.category_id}`;
+      const current = best.get(key);
+      if (!current || compareRunTimes(run.time_ms, current.run.time_ms, slowerIsBetter) < 0) {
+        best.set(key, { run, game, cat: catMap[run.category_id] });
+      }
+    }
+    return [...best.values()];
+  }, [verifiedRuns, gameMap, catMap, profile?.role]);
+
+  const gamesPlayed = useMemo(
+    () => new Set(verifiedRuns.map((run) => run.game_id)).size,
+    [verifiedRuns],
+  );
+
   if (loading) {
     return (
       <div className="sr-container py-20 text-center">
@@ -94,8 +120,8 @@ export function ProfilePage({ username }: ProfilePageProps) {
   if (notFound || !profile) {
     return (
       <div className="sr-container py-20 text-center">
-        <Trophy className="mx-auto h-12 w-12 text-emerald-800" />
-        <h1 className="mt-4 text-2xl font-bold text-emerald-50">
+        <Trophy className="mx-auto h-12 w-12 text-[var(--sr-text-muted)]" />
+        <h1 className="mt-4 text-2xl font-bold text-[var(--sr-text)]">
           Runner not found
         </h1>
         <a href={linkHref('/games')} className="sr-btn-ghost mt-6">
@@ -107,9 +133,6 @@ export function ProfilePage({ username }: ProfilePageProps) {
   }
 
   const p = profile;
-  const verifiedRuns = runs.filter((r) => r.status === 'verified');
-  const pendingRuns = runs.filter((r) => r.status === 'pending');
-  const rejectedRuns = runs.filter((r) => r.status === 'rejected');
 
   return (
     <div className="sr-container py-8 sm:py-10">
@@ -122,11 +145,11 @@ export function ProfilePage({ username }: ProfilePageProps) {
       </a>
 
       {/* Profile header */}
-      <section className="sr-panel flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
+      <section className="flex flex-col gap-5 border-b border-[var(--sr-border)] pb-8 sm:flex-row sm:items-center">
         <Avatar name={p.username} src={p.avatar_url} className="h-20 w-20 text-2xl sm:h-24 sm:w-24" />
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-emerald-50">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold text-[var(--sr-text)] sm:text-3xl">
               {p.username}
             </h1>
             {p.role === 'owner' && (
@@ -141,112 +164,145 @@ export function ProfilePage({ username }: ProfilePageProps) {
             )}
           </div>
           {p.bio && (
-            <p className="mt-1 text-sm text-emerald-100/70">{p.bio}</p>
+            <p className="mt-1 max-w-xl text-sm text-[var(--sr-text-dim)]">{p.bio}</p>
           )}
-          <p className="mt-2 flex items-center gap-1 text-xs text-emerald-700">
+          <p className="mt-2 flex items-center gap-1 text-xs text-[var(--sr-text-muted)]">
             <Calendar className="h-3 w-3" />
             Joined {timeAgo(p.created_at)}
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-3 border-t border-[var(--sr-border)] pt-4 text-center sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
-          <div className="rounded-sm bg-[var(--sr-bg-2)] px-4 py-2">
-            <p className="text-2xl font-bold text-emerald-50">
-              {verifiedRuns.length}
-            </p>
-            <p className="text-xs text-emerald-700">Verified</p>
+        <dl className="grid grid-cols-3 gap-3 border-t border-[var(--sr-border)] pt-4 text-center sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+          <div className="px-3">
+            <dt className="sr-stat-label">Verified</dt>
+            <dd className="sr-stat-value">{verifiedRuns.length}</dd>
           </div>
-          <div className="rounded-sm bg-[var(--sr-bg-2)] px-4 py-2">
-            <p className="text-2xl font-bold text-emerald-50">
-              {pendingRuns.length}
-            </p>
-            <p className="text-xs text-emerald-700">Pending</p>
+          <div className="border-l border-[var(--sr-border)] px-3">
+            <dt className="sr-stat-label">In review</dt>
+            <dd className="sr-stat-value">{pendingRuns.length}</dd>
           </div>
-        </div>
+          <div className="border-l border-[var(--sr-border)] px-3">
+            <dt className="sr-stat-label">Games</dt>
+            <dd className="sr-stat-value">{gamesPlayed}</dd>
+          </div>
+        </dl>
+      </section>
+
+      {/* Personal bests */}
+      <section className="mt-8" aria-labelledby="personal-bests-heading">
+        <h2 id="personal-bests-heading" className="sr-rule-title">Personal bests</h2>
+        {personalBests.length === 0 ? (
+          <p className="mt-3 text-sm text-[var(--sr-text-muted)]">
+            No verified records yet. Best times show up here after a run is reviewed.
+          </p>
+        ) : (
+          <ul className="mt-2 divide-y divide-[var(--sr-border)] border-y border-[var(--sr-border)]">
+            {personalBests.map(({ run, game, cat }) => (
+              <li key={run.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm">
+                    {game
+                      ? <a href={linkHref(`/games/${game.slug}`)} className="font-semibold text-[var(--sr-text)] hover:text-[var(--sr-link)]">{game.title}</a>
+                      : <span className="font-semibold text-[var(--sr-text)]">Game</span>}
+                    <span className="text-[var(--sr-text-muted)]"> — {cat?.name ?? 'Category'}</span>
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--sr-text-muted)]">{run.platform} · {timeAgo(run.created_at)}</p>
+                </div>
+                <span className="sr-mono whitespace-nowrap text-sm font-semibold text-[var(--sr-text)]">
+                  {formatTime(run.time_ms)}
+                </span>
+                <a
+                  href={run.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
+                  aria-label="Watch run video"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {/* Run history */}
-      <div className="mt-8">
-        <h2 className="sr-panel-title mb-3 px-0 text-base">Run history</h2>
+      <section className="mt-8" aria-labelledby="run-history-heading">
+        <h2 id="run-history-heading" className="sr-rule-title">Run history</h2>
         {runs.length === 0 ? (
-          <div className="sr-panel p-8 text-center text-[var(--sr-text-muted)]">
-            No runs submitted yet.
-          </div>
+          <p className="mt-3 text-sm text-[var(--sr-text-muted)]">No runs submitted yet.</p>
         ) : (
-          <div className="sr-panel divide-y divide-[var(--sr-border)]">
+          <ul className="mt-2 divide-y divide-[var(--sr-border)] border-y border-[var(--sr-border)]">
             {runs.map((run) => {
               const game = gameMap[run.game_id];
               const cat = catMap[run.category_id];
-              const statusStyle = {
-                verified: 'bg-emerald-500/20 text-emerald-400',
-                pending: 'bg-yellow-500/20 text-yellow-400',
-                rejected: 'bg-red-500/20 text-red-400',
+              const statusBadge = {
+                verified: 'sr-badge-ok',
+                pending: 'sr-badge-pending',
+                rejected: 'sr-badge-rejected',
               }[run.status];
 
               return (
-                <div
+                <li
                   key={run.id}
-                  className="flex flex-col gap-3 px-4 py-4 odd:bg-[var(--sr-bg-2)]/50 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       {game && (
                         <a
                           href={linkHref(`/games/${game.slug}`)}
-                          className="font-semibold text-emerald-50 hover:text-emerald-300"
+                          className="font-semibold text-[var(--sr-text)] hover:text-[var(--sr-link)]"
                         >
                           {game.title}
                         </a>
                       )}
                       {cat && (
-                        <span className="text-sm text-emerald-700">
+                        <span className="text-sm text-[var(--sr-text-muted)]">
                           — {cat.name}
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 flex items-center gap-3 text-sm">
-                      <span className="flex items-center gap-1 font-mono text-emerald-100">
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                      <span className="sr-mono flex items-center gap-1 text-[var(--sr-text)]">
                         <Clock className="h-3 w-3 text-[var(--sr-primary)]" />
                         {formatTime(run.time_ms)}
                       </span>
-                      <span className="text-emerald-700">{run.platform}</span>
-                      <span className="text-emerald-800">
+                      <span className="text-[var(--sr-text-dim)]">{run.platform}</span>
+                      <span className="text-xs text-[var(--sr-text-muted)]">
                         {timeAgo(run.created_at)}
                       </span>
                     </div>
                     {run.status === 'rejected' && run.rejection_reason && (
-                      <p className="mt-1 text-xs text-red-400">
+                      <p className="mt-1 text-xs text-[var(--sr-danger)]">
                         Rejected: {run.rejection_reason}
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`sr-badge ${statusStyle} capitalize`}
-                    >
+                  <div className="flex flex-shrink-0 items-center gap-3">
+                    <span className={`sr-badge capitalize ${statusBadge}`}>
                       {run.status}
                     </span>
                     <a
                       href={run.video_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-emerald-700 hover:text-[var(--sr-primary)]"
+                      className="text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
                       aria-label="Watch run"
                     >
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   </div>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
         {rejectedRuns.length > 0 && (
-          <p className="mt-3 text-xs text-emerald-800">
-            Rejected runs are kept for your records but do not appear on
-            leaderboards.
+          <p className="mt-3 text-xs text-[var(--sr-text-muted)]">
+            Rejected runs are kept for your records but do not appear on leaderboards.
           </p>
         )}
-      </div>
+      </section>
     </div>
   );
 }

@@ -202,7 +202,7 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
   if (loading) {
     return (
       <div className="sr-container py-20 text-center">
-        <p className="text-emerald-700">Loading…</p>
+        <p className="text-[var(--sr-text-muted)]">Loading…</p>
       </div>
     );
   }
@@ -210,7 +210,7 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
   if (!session) {
     return (
       <div className="sr-container py-20 text-center">
-        <p className="text-emerald-100">Sign in to submit a run.</p>
+        <p className="text-[var(--sr-text)]">Sign in to submit a run.</p>
         <button onClick={onRequireAuth} className="sr-btn-primary mt-4">
           Sign in
         </button>
@@ -238,10 +238,11 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
       </header>
 
       <form onSubmit={handleSubmit} className="sr-panel flex flex-col gap-5 p-4 sm:p-6">
-        {loadError && <p role="alert" className="border-l-2 border-red-400 px-3 py-2 text-sm text-red-300">{loadError}</p>}
-        <div className="grid grid-cols-1 gap-4 border-y border-[var(--sr-border)] py-5 sm:grid-cols-2">
+        {loadError && <p role="alert" className="border-l-2 border-[var(--sr-danger)] bg-[var(--sr-bad-bg)] px-3 py-2 text-sm text-[var(--sr-danger)]">{loadError}</p>}
+        <p className="sr-rule-title">Run</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="run-game" className="mb-1 block text-sm font-medium text-emerald-100">
+            <label htmlFor="run-game" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
               Game
             </label>
             <select
@@ -258,15 +259,15 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
                 </option>
               ))}
             </select>
-            {validationField === 'game' && error && <p role="alert" className="mt-1 text-xs text-red-400">{error}</p>}
+            {validationField === 'game' && error && <p role="alert" className="mt-1 text-xs text-[var(--sr-danger)]">{error}</p>}
             {selectedGameComingSoon && (
-              <p role="status" className="mt-2 text-sm text-amber-300">
+              <p role="status" className="mt-2 text-sm text-[var(--sr-warn)]">
                 Cannot submit a run yet — {selectedGame?.title} hasn’t been released.
               </p>
             )}
           </div>
           <fieldset aria-required="true">
-            <legend className="mb-1 block text-sm font-medium text-emerald-100">Category</legend>
+            <legend className="mb-1 block text-sm font-medium text-[var(--sr-text)]">Category</legend>
             {!gameId ? (
               <p className="text-sm text-[var(--sr-text-muted)]">Choose a game to see its categories.</p>
             ) : mainCategories.length === 0 ? (
@@ -304,8 +305,8 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
                         }}
                         className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
                           isSelected
-                            ? 'bg-[var(--sr-primary)]/10 text-white'
-                            : 'text-[var(--sr-text-dim)] hover:bg-[var(--sr-surface-2)] hover:text-white'
+                            ? 'bg-[var(--sr-primary)]/10 text-[var(--sr-text)]'
+                            : 'text-[var(--sr-text-dim)] hover:bg-[var(--sr-surface-2)] hover:text-[var(--sr-text)]'
                         }`}
                       >
                         <span>{mainCategory.name}</span>
@@ -350,31 +351,32 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
               </div>
             )}
             {validationField === 'category' && error && (
-              <p role="alert" className="mt-1 text-xs text-red-400">{error}</p>
+              <p role="alert" className="mt-1 text-xs text-[var(--sr-danger)]">{error}</p>
             )}
           </fieldset>
         </div>
 
         {selectedCategory?.timing_rules && (
-          <div className="rounded-lg border border-[var(--sr-border)] bg-[var(--sr-surface)] p-3 text-sm text-emerald-100/80">
-            <span className="font-semibold text-emerald-50">Timing rules: </span>
+          <div className="flex items-start gap-2 border-l-2 border-[var(--sr-border-hover)] bg-[var(--sr-surface-2)] px-3 py-2.5 text-sm text-[var(--sr-text-dim)]">
+            <span className="font-semibold text-[var(--sr-text)]">Timing rules: </span>
             {selectedCategory.timing_rules}
           </div>
         )}
 
         {/* Time input */}
+        <p className="sr-rule-title">Time</p>
         <div>
-          <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-emerald-100" htmlFor="run-hours">
+          <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-[var(--sr-text)]" htmlFor="run-hours">
             <Clock className="h-4 w-4 text-[var(--sr-primary)]" />
             Completion time
           </label>
           <div className="flex flex-wrap items-center gap-2">
             <TimeField id="run-hours" label="h" value={hours} onChange={setHours} max={99} />
-            <span className="text-emerald-700">:</span>
+            <span className="text-[var(--sr-text-muted)]">:</span>
             <TimeField id="run-minutes" label="m" value={minutes} onChange={setMinutes} max={59} />
-            <span className="text-emerald-700">:</span>
+            <span className="text-[var(--sr-text-muted)]">:</span>
             <TimeField id="run-seconds" label={"s"} value={seconds} onChange={setSeconds} max={59} />
-            <span className="text-emerald-700">.</span>
+            <span className="text-[var(--sr-text-muted)]">.</span>
             <TimeField
               label="ms"
               id="run-millis"
@@ -384,16 +386,16 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
               width="w-20"
             />
             {timeMs > 0 && (
-              <span className="ml-2 font-mono text-sm text-[var(--sr-primary)]">
+              <span className="ml-2 sr-mono text-sm text-[var(--sr-primary)]">
                 = {formatTime(timeMs)}
               </span>
             )}
           </div>
-          {validationField === 'time' && error && <p role="alert" className="mt-1 text-xs text-red-400">{error}</p>}
+          {validationField === 'time' && error && <p role="alert" className="mt-1 text-xs text-[var(--sr-danger)]">{error}</p>}
         </div>
 
         <div>
-          <label htmlFor="run-platform" className="mb-1 block text-sm font-medium text-emerald-100">
+          <label htmlFor="run-platform" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
             Platform
           </label>
           <input
@@ -407,7 +409,9 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
         </div>
 
         <div>
-          <label htmlFor="run-video" className="mb-1 flex items-center gap-1.5 text-sm font-medium text-emerald-100">
+          <p className="sr-rule-title">Video proof</p>
+          <div className="mt-3 space-y-4">
+          <label htmlFor="run-video" className="mb-1 flex items-center gap-1.5 text-sm font-medium text-[var(--sr-text)]">
             <Youtube className="h-4 w-4 text-red-500" />
             YouTube proof URL
           </label>
@@ -421,33 +425,34 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
             required
           />
           {videoUrl && !videoValid && (
-            <p className="mt-1 text-xs text-red-400">
+            <p className="mt-1 text-xs text-[var(--sr-danger)]">
               Enter a valid YouTube link (watch, youtu.be, embed, or shorts).
             </p>
           )}
-          {validationField === 'video' && error && <p role="alert" className="mt-1 text-xs text-red-400">{error}</p>}
+          {validationField === 'video' && error && <p role="alert" className="mt-1 text-xs text-[var(--sr-danger)]">{error}</p>}
           {videoValid && videoId && (
-            <p className="mt-1 text-xs text-emerald-400">
+            <p className="mt-1 text-xs text-[var(--sr-primary)]">
               Valid YouTube link detected.
             </p>
           )}
-        </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="block text-sm font-medium text-emerald-100">
+          <label className="block text-sm font-medium text-[var(--sr-text)]">
             Run starts in video <span className="text-[var(--sr-primary)]">Required</span>
             <input type="text" inputMode="numeric" value={videoStart} onChange={(e) => setVideoStart(e.target.value)} placeholder="e.g. 1:24 or 00:01:24" className="sr-input mt-1" required />
           </label>
-          <label className="block text-sm font-medium text-emerald-100">
+          <label className="block text-sm font-medium text-[var(--sr-text)]">
             Run ends in video <span className="text-[var(--sr-primary)]">Required</span>
             <input type="text" inputMode="numeric" value={videoEnd} onChange={(e) => setVideoEnd(e.target.value)} placeholder="e.g. 3:52 or 00:03:52" className="sr-input mt-1" required />
           </label>
-          <p className="text-xs leading-5 text-emerald-700 sm:col-span-2">Both markers are required. Enter them as mm:ss or hh:mm:ss to help reviewers jump to the start and finish.</p>
-          {validationField === 'markers' && error && <p role="alert" className="text-xs text-red-400 sm:col-span-2">{error}</p>}
+          <p className="text-xs leading-5 text-[var(--sr-text-muted)] sm:col-span-2">Both markers are required. Enter them as mm:ss or hh:mm:ss to help reviewers jump to the start and finish.</p>
+          {validationField === 'markers' && error && <p role="alert" className="text-xs text-[var(--sr-danger)] sm:col-span-2">{error}</p>}
+        </div>
+          </div>
         </div>
 
         <div>
-          <label htmlFor="run-notes" className="mb-1 block text-sm font-medium text-emerald-100">
+          <label htmlFor="run-notes" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
             Notes (optional)
           </label>
           <textarea
@@ -461,12 +466,12 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
         </div>
 
         {error && !validationField && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+          <div className="border-l-2 border-[var(--sr-danger)] bg-[var(--sr-bad-bg)] px-3 py-2 text-sm text-[var(--sr-danger)]">
             {error}
           </div>
         )}
         {success && (
-          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-300">
+          <div className="border-l-2 border-[var(--sr-primary)] bg-[var(--sr-ok-bg)] px-3 py-3 text-sm text-[var(--sr-text)]">
             {success}
           </div>
         )}
@@ -526,7 +531,7 @@ function TimeField({
         placeholder="0"
         className={`sr-input text-center ${width}`}
       />
-      <span className="mt-0.5 text-[10px] uppercase text-emerald-700">
+      <span className="mt-0.5 text-[10px] uppercase text-[var(--sr-text-muted)]">
         {label}
       </span>
     </div>
