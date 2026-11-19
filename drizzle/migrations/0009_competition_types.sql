@@ -17,27 +17,21 @@ ALTER TABLE public.categories
   ADD COLUMN IF NOT EXISTS record_rules text,
   ADD COLUMN IF NOT EXISTS record_higher_is_better boolean NOT NULL DEFAULT true;
 
-DO $$
-BEGIN
-  ALTER TABLE public.categories
-    ADD CONSTRAINT categories_competition_type_check
-    CHECK (competition_type IN ('speedrun', 'record'));
-EXCEPTION
-  WHEN duplicate_object THEN NULL;
-END $$;
+ALTER TABLE public.categories
+  DROP CONSTRAINT IF EXISTS categories_competition_type_check;
+ALTER TABLE public.categories
+  ADD CONSTRAINT categories_competition_type_check
+  CHECK (competition_type IN ('speedrun', 'record'));
 
 -- A record competition must state the measurement unit shown next to values.
-DO $$
-BEGIN
-  ALTER TABLE public.categories
-    ADD CONSTRAINT categories_record_unit_check
-    CHECK (
-      competition_type <> 'record'
-      OR (record_unit IS NOT NULL AND btrim(record_unit) <> '')
-    );
-EXCEPTION
-  WHEN duplicate_object THEN NULL;
-END $$;
+ALTER TABLE public.categories
+  DROP CONSTRAINT IF EXISTS categories_record_unit_check;
+ALTER TABLE public.categories
+  ADD CONSTRAINT categories_record_unit_check
+  CHECK (
+    competition_type <> 'record'
+    OR (record_unit IS NOT NULL AND btrim(record_unit) <> '')
+  );
 
 CREATE INDEX IF NOT EXISTS categories_game_type_idx
   ON public.categories (game_id, competition_type, sort_order, name);
@@ -81,49 +75,33 @@ GRANT ALL ON public.record_submissions TO service_role;
 
 ALTER TABLE public.record_submissions ENABLE ROW LEVEL SECURITY;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public' AND tablename = 'record_submissions'
-      AND policyname = 'record_submissions_select_visible'
-  ) THEN
-    CREATE POLICY record_submissions_select_visible ON public.record_submissions
-      FOR SELECT TO anon, authenticated
-      USING (
-        submitter_id = auth.uid()
-        OR public.is_game_staff()
-        OR (
-          status = 'verified'
-          AND EXISTS (
-            SELECT 1 FROM public.games g
-            WHERE g.id = game_id AND NOT g.is_hidden
-          )
-        )
-      );
-  END IF;
+-- Submitters see their own rows, staff see everything, and the public sees
+-- verified values on visible games only.
+DROP POLICY IF EXISTS record_submissions_select_visible ON public.record_submissions;
+CREATE POLICY record_submissions_select_visible ON public.record_submissions
+  FOR SELECT TO anon, authenticated
+  USING (
+    submitter_id = auth.uid()
+    OR public.is_game_staff()
+    OR (
+      status = 'verified'
+      AND EXISTS (
+        SELECT 1 FROM public.games g
+        WHERE g.id = game_id AND NOT g.is_hidden
+      )
+    )
+  );
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public' AND tablename = 'record_submissions'
-      AND policyname = 'record_submissions_insert_own'
-  ) THEN
-    CREATE POLICY record_submissions_insert_own ON public.record_submissions
-      FOR INSERT TO authenticated
-      WITH CHECK (auth.uid() = submitter_id);
-  END IF;
+DROP POLICY IF EXISTS record_submissions_insert_own ON public.record_submissions;
+CREATE POLICY record_submissions_insert_own ON public.record_submissions
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = submitter_id);
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public' AND tablename = 'record_submissions'
-      AND policyname = 'record_submissions_update_own'
-  ) THEN
-    CREATE POLICY record_submissions_update_own ON public.record_submissions
-      FOR UPDATE TO authenticated
-      USING (auth.uid() = submitter_id)
-      WITH CHECK (auth.uid() = submitter_id);
-  END IF;
-END $$;
+DROP POLICY IF EXISTS record_submissions_update_own ON public.record_submissions;
+CREATE POLICY record_submissions_update_own ON public.record_submissions
+  FOR UPDATE TO authenticated
+  USING (auth.uid() = submitter_id)
+  WITH CHECK (auth.uid() = submitter_id);
 
 -- Type guards: a run can never land on a record board and a record value can
 -- never land on a speedrun board.
