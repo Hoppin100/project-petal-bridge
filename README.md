@@ -27,7 +27,11 @@ Before deploying, apply database migrations `0003_add_moderator_role` and
 `0004_hide_games` to enable moderator access and game visibility controls.
 Apply `drizzle/migrations/0006_allow_duplicate_subcategories.sql` to the project
 database to allow same-named subcategories under different main categories.
-Pushing the code does not apply this SQL migration automatically.
+Apply `drizzle/migrations/0009_competition_types.sql` to enable Record
+competitions alongside speedruns: it adds `categories.competition_type` plus the
+record fields and the `record_submissions` table with its moderation functions.
+Existing categories default to `speedrun`, so all current runs and categories are
+left untouched. Pushing the code does not apply these SQL migrations automatically.
 
 To enable visual run assessments, add `GEMINI_API_KEY` as a server-side secret
 in Lovable Cloud. Owners can request an assessment from the verification

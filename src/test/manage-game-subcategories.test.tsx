@@ -58,36 +58,38 @@ vi.mock('@/lib/supabase', () => ({
         }
         if (table !== 'categories') return { data: [], error: null };
         let rows = [...database.categories];
-        if (typeof filters.game_id === 'string') {
-          rows = rows.filter((row) => row.game_id === filters.game_id);
+        if (typeof filters['game_id'] === 'string') {
+          rows = rows.filter((row) => row['game_id'] === filters['game_id']);
         }
-        if (Array.isArray(filters.game_ids)) {
-          rows = rows.filter((row) => (filters.game_ids as string[]).includes(String(row.game_id)));
+        if (Array.isArray(filters['game_ids'])) {
+          rows = rows.filter((row) =>
+            (filters['game_ids'] as string[]).includes(String(row['game_id']))
+          );
         }
         return { data: rows, error: null };
       };
 
       const query: Record<string, unknown> = {};
-      query.select = () => query;
-      query.in = (column: string, values: unknown) => {
+      query['select'] = () => query;
+      query['in'] = (column: string, values: unknown) => {
         filters[column === 'game_id' ? 'game_ids' : column] = values;
         return query;
       };
-      query.eq = (column: string, value: unknown) => {
+      query['eq'] = (column: string, value: unknown) => {
         filters[column] = value;
         return query;
       };
-      query.order = () => query;
-      query.insert = (value: typeof payload) => {
+      query['order'] = () => query;
+      query['insert'] = (value: typeof payload) => {
         action = 'insert';
         payload = value;
         return query;
       };
-      query.single = async () => {
+      query['single'] = async () => {
         const { data, error } = execute();
         return { data: data[0] ?? null, error };
       };
-      query.then = (
+      query['then'] = (
         resolve: (value: unknown) => unknown,
         reject: (reason: unknown) => unknown
       ) => Promise.resolve(execute()).then(resolve, reject);
@@ -171,5 +173,68 @@ describe('Manage game subcategories', () => {
         })
       );
     });
+  });
+
+  it('creates a record competition with a measurement unit and direction', async () => {
+    render(<ManageGamesPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Categories' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add category' }));
+    fireEvent.click(screen.getByRole('radio', { name: /^Record/ }));
+
+    const dialog = within(screen.getByRole('dialog'));
+    // Record form: numeric wording, no timing-rules field.
+    expect(dialog.getByText('New record')).toBeInTheDocument();
+    expect(dialog.getByLabelText(/^Record name/)).toBeRequired();
+    expect(dialog.getByLabelText(/^Measurement unit/)).toBeRequired();
+    expect(dialog.getByLabelText('Leaderboard order')).toHaveValue('higher');
+    expect(dialog.queryByLabelText(/^Timing rules/)).toBeNull();
+
+    fireEvent.change(dialog.getByLabelText(/^Record name/), {
+      target: { value: 'Most Kills in One Match' },
+    });
+    fireEvent.change(dialog.getByLabelText(/^Measurement unit/), {
+      target: { value: 'Kills' },
+    });
+    fireEvent.change(dialog.getByLabelText('Leaderboard order'), {
+      target: { value: 'lower' },
+    });
+    fireEvent.change(dialog.getByLabelText(/^Description/), {
+      target: { value: 'Eliminations in a single match.' },
+    });
+    fireEvent.change(dialog.getByLabelText(/^Rules and restrictions/), {
+      target: { value: 'Standard mode only.' },
+    });
+    fireEvent.click(dialog.getByRole('button', { name: 'Add record' }));
+
+    await waitFor(() => {
+      expect(database.categories).toContainEqual(
+        expect.objectContaining({
+          game_id: 'game-id',
+          parent_category_id: null,
+          name: 'Most Kills in One Match',
+          competition_type: 'record',
+          record_unit: 'Kills',
+          record_higher_is_better: false,
+          record_description: 'Eliminations in a single match.',
+          record_rules: 'Standard mode only.',
+          timing_rules: null,
+        })
+      );
+    });
+  });
+
+  it('keeps the speedrun form and default category label unchanged', async () => {
+    render(<ManageGamesPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Categories' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add category' }));
+    expect(screen.getByRole('radio', { name: /^Speedrun/ })).toBeChecked();
+    expect(screen.getByLabelText(/^Category name/)).toBeRequired();
+    expect(screen.getByLabelText(/^Timing rules/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Measurement unit/)).toBeNull();
+    expect(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Add category' })
+    ).toBeInTheDocument();
   });
 });

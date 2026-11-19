@@ -16,6 +16,7 @@ import {
   Info,
   Trash2,
   ArrowUpRight,
+  Save,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
@@ -28,8 +29,18 @@ import type {
   ReferenceExample,
   AssessmentHistoryEntry,
   Recommendation,
+  RecordSubmission,
 } from '@/lib/types';
 import { formatTime, timeAgo, parseYouTubeId, youtubeEmbedUrl } from '@/lib/format';
+import {
+  COMPETITION_COLUMNS,
+  RECORD_SUBMISSION_COLUMNS,
+  compareRecordValues,
+  currentRecord,
+  formatRecordWithUnit,
+  normalizeCategory,
+  recordDirectionLabel,
+} from '@/lib/competitions';
 import { linkHref } from '@/lib/router';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 
@@ -43,6 +54,14 @@ export function DashboardPage() {
   const [assessmentMap, setAssessmentMap] = useState<Record<string, AiAssessment>>({});
   const [refMap, setRefMap] = useState<Record<string, ReferenceExample>>({});
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [pendingRecords, setPendingRecords] = useState<RecordSubmission[]>([]);
+  const [recentRecords, setRecentRecords] = useState<RecordSubmission[]>([]);
+  const [recordCatMap, setRecordCatMap] = useState<Record<string, Category>>({});
+  const [recordBestMap, setRecordBestMap] = useState<Record<string, RecordSubmission | null>>({});
+  const [recordsReady, setRecordsReady] = useState(true);
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const [recordNotes, setRecordNotes] = useState('');
+  const [pendingDeleteRecordId, setPendingDeleteRecordId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState('');
@@ -76,6 +95,34 @@ export function DashboardPage() {
       .limit(10);
     setRecentRuns((recent as Run[]) ?? []);
 
+    // Record submissions: same review queue, separate table by design.
+    const [pendingRecordResult, recentRecordResult] = await Promise.all([
+      supabase
+        .from('record_submissions')
+        .select(RECORD_SUBMISSION_COLUMNS)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('record_submissions')
+        .select(RECORD_SUBMISSION_COLUMNS)
+        .in('status', ['verified', 'rejected'])
+        .order('verified_at', { ascending: false })
+        .limit(10),
+    ]);
+    const recordsMissing =
+      pendingRecordResult.error?.code === '42P01' ||
+      pendingRecordResult.error?.code === 'PGRST205' ||
+      /record_submissions/i.test(pendingRecordResult.error?.message ?? '');
+    const pendingRecordList = recordsMissing
+      ? []
+      : ((pendingRecordResult.data as RecordSubmission[]) ?? []);
+    const recentRecordList = recordsMissing
+      ? []
+      : ((recentRecordResult.data as RecordSubmission[]) ?? []);
+    setRecordsReady(!recordsMissing);
+    setPendingRecords(pendingRecordList);
+    setRecentRecords(recentRecordList);
+
     // Stats
     const { count: cPending } = await supabase
       .from('runs')
@@ -92,19 +139,50 @@ export function DashboardPage() {
     const { count: cRefs } = await supabase
       .from('reference_examples')
       .select('id', { count: 'exact', head: true });
+
+    let rPending = 0;
+    let rVerified = 0;
+    let rRejected = 0;
+    if (!recordsMissing) {
+      const [countPending, countVerified, countRejected] = await Promise.all([
+        supabase
+          .from('record_submissions')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending'),
+        supabase
+          .from('record_submissions')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'verified'),
+        supabase
+          .from('record_submissions')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'rejected'),
+      ]);
+      rPending = countPending.count ?? 0;
+      rVerified = countVerified.count ?? 0;
+      rRejected = countRejected.count ?? 0;
+    }
+
     setStats({
-      pending: cPending ?? 0,
-      verified: cVerified ?? 0,
-      rejected: cRejected ?? 0,
+      pending: (cPending ?? 0) + rPending,
+      verified: (cVerified ?? 0) + rVerified,
+      rejected: (cRejected ?? 0) + rRejected,
       refs: cRefs ?? 0,
     });
+
+    const allRecords = [...pendingRecordList, ...recentRecordList];
 
     const allRuns = [...pendingList, ...((recent as Run[]) ?? [])];
 
     // Fetch related data
-    const gIds = [...new Set(allRuns.map((r) => r.game_id))];
+    const gIds = [...new Set([...allRuns.map((r) => r.game_id), ...allRecords.map((r) => r.game_id)])];
     const cIds = [...new Set(allRuns.map((r) => r.category_id))];
-    const rIds = [...new Set(allRuns.map((r) => r.runner_id))];
+    const rIds = [
+      ...new Set([
+        ...allRuns.map((r) => r.runner_id),
+        ...allRecords.map((r) => r.submitter_id),
+      ]),
+    ];
     const runIds = allRuns.map((r) => r.id);
 
     if (gIds.length) {
@@ -133,6 +211,62 @@ export function DashboardPage() {
       const m: Record<string, Profile> = {};
       for (const p of (data as Profile[]) ?? []) m[p.id] = p;
       setRunnerMap(m);
+    }
+
+    // Competitions behind the record queue, plus each board's current record so
+    // owners can compare a submission against what stands today.
+    const recordCategoryIds = [...new Set(allRecords.map((r) => r.category_id))];
+    if (recordCategoryIds.length) {
+      const { data: comps } = await supabase
+        .from('categories')
+        .select(COMPETITION_COLUMNS)
+        .in('id', recordCategoryIds);
+      const competitionMap: Record<string, Category> = {};
+      for (const c of (comps as Partial<Category>[]) ?? []) {
+        competitionMap[c.id!] = normalizeCategory(c);
+      }
+      setRecordCatMap(competitionMap);
+
+      const { data: verified } = await supabase
+        .from('record_submissions')
+        .select(RECORD_SUBMISSION_COLUMNS)
+        .in('category_id', recordCategoryIds)
+        .eq('status', 'verified');
+      const grouped: Record<string, RecordSubmission[]> = {};
+      for (const submission of (verified as RecordSubmission[]) ?? []) {
+        (grouped[submission.category_id] ??= []).push(submission);
+      }
+      const best: Record<string, RecordSubmission | null> = {};
+      for (const categoryId of recordCategoryIds) {
+        const competition = competitionMap[categoryId];
+        best[categoryId] = currentRecord(
+          grouped[categoryId] ?? [],
+          competition?.record_higher_is_better ?? true,
+        );
+      }
+      setRecordBestMap(best);
+
+      // Current record holders may not be in the pending/recent queue, so load
+      // their profiles too and let the comparison panel name them.
+      const holderIds = [
+        ...new Set(
+          Object.values(best)
+            .filter((entry): entry is RecordSubmission => Boolean(entry))
+            .map((entry) => entry.submitter_id),
+        ),
+      ].filter((id) => !rIds.includes(id));
+      if (holderIds.length) {
+        const { data: holderProfiles } = await supabase
+          .from('profiles')
+          .select('id, username, role, bio, avatar_url, created_at')
+          .in('id', holderIds);
+        const holderMap: Record<string, Profile> = {};
+        for (const p of (holderProfiles as Profile[]) ?? []) holderMap[p.id] = p;
+        setRunnerMap((current) => ({ ...current, ...holderMap }));
+      }
+    } else {
+      setRecordCatMap({});
+      setRecordBestMap({});
     }
     if (runIds.length) {
       const { data: assess } = await supabase
@@ -297,6 +431,91 @@ export function DashboardPage() {
     }
   }
 
+  async function handleVerifyRecord(submissionId: string) {
+    setActionError('');
+    setActionLoading(true);
+    try {
+      const { error } = await supabase.rpc('verify_record_submission', {
+        p_submission: submissionId,
+        p_notes: recordNotes.trim() || null,
+      });
+      if (error) throw error;
+      setRecordNotes('');
+      await loadData();
+    } catch (e) {
+      console.error('verify record failed', e);
+      setActionError(
+        'Could not approve this record. Apply migration 0009 and check owner permissions.'
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleRejectRecord(submissionId: string) {
+    if (!rejectReason.trim()) {
+      setActionError('Please provide a rejection reason.');
+      return;
+    }
+    setActionError('');
+    setActionLoading(true);
+    try {
+      const { error } = await supabase.rpc('reject_record_submission', {
+        p_submission: submissionId,
+        p_reason: rejectReason.trim(),
+        p_notes: recordNotes.trim() || null,
+      });
+      if (error) throw error;
+      setRejectReason('');
+      setRecordNotes('');
+      await loadData();
+    } catch (e) {
+      console.error('reject record failed', e);
+      setActionError('Could not reject this record.');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleSaveRecordNotes(submissionId: string) {
+    setActionError('');
+    setActionLoading(true);
+    try {
+      const { error } = await supabase.rpc('set_record_moderator_notes', {
+        p_submission: submissionId,
+        p_notes: recordNotes,
+      });
+      if (error) throw error;
+      await loadData();
+    } catch (e) {
+      console.error('save record notes failed', e);
+      setActionError('Could not save moderator notes.');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function confirmDeleteRecord() {
+    if (!pendingDeleteRecordId) return;
+    const submissionId = pendingDeleteRecordId;
+    setPendingDeleteRecordId(null);
+    setActionError('');
+    setActionLoading(true);
+    try {
+      const { error } = await supabase.rpc('delete_record_submission', {
+        p_submission: submissionId,
+      });
+      if (error) throw error;
+      setSelectedRecordId(null);
+      await loadData();
+    } catch (e) {
+      console.error('delete record failed', e);
+      setActionError('Could not delete this record submission.');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   // While the stored session and profile are still being read, show neither
   // the review tools nor the "owners only" message — an owner reloading this
   // page would otherwise see an access-denied screen flash first.
@@ -330,6 +549,9 @@ export function DashboardPage() {
 
   const selectedRun = pendingRuns.find((r) => r.id === selectedRunId) ??
     recentRuns.find((r) => r.id === selectedRunId) ?? null;
+  const selectedRecord =
+    pendingRecords.find((record) => record.id === selectedRecordId) ??
+    recentRecords.find((record) => record.id === selectedRecordId) ?? null;
 
   return (
     <div className="sr-container py-8 sm:py-10">
@@ -354,6 +576,17 @@ export function DashboardPage() {
         <StatCard label="Reference examples" value={stats.refs} color="text-[var(--sr-link)]" />
       </div>
 
+      {!recordsReady && (
+        <p
+          role="status"
+          className="mb-4 border-l-2 border-[var(--sr-warn)] px-3 py-2 text-sm text-[var(--sr-text-muted)]"
+        >
+          Record submissions are hidden until
+          {' '}drizzle/migrations/0009_competition_types.sql
+          {' '}is applied to the project database. Speedrun review works as usual.
+        </p>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Queue list */}
         <div className="lg:col-span-1">
@@ -366,7 +599,7 @@ export function DashboardPage() {
                   : 'text-[var(--sr-text-dim)] hover:bg-[var(--sr-surface-2)]'
               }`}
             >
-              Pending ({pendingRuns.length})
+              Pending ({pendingRuns.length + pendingRecords.length})
             </button>
             <button
               onClick={() => setTab('history')}
@@ -376,7 +609,7 @@ export function DashboardPage() {
                   : 'text-[var(--sr-text-dim)] hover:bg-[var(--sr-surface-2)]'
               }`}
             >
-              Recent ({recentRuns.length})
+              Recent ({recentRuns.length + recentRecords.length})
             </button>
           </div>
 
@@ -385,7 +618,7 @@ export function DashboardPage() {
               <Loader2 className="mx-auto h-6 w-6 animate-spin text-[var(--sr-primary)]" />
             </div>
           ) : tab === 'pending' ? (
-            pendingRuns.length === 0 ? (
+            pendingRuns.length === 0 && pendingRecords.length === 0 ? (
               <div className="sr-card p-6 text-center text-sm text-[var(--sr-text-muted)]">
                 No pending submissions. All caught up!
               </div>
@@ -400,12 +633,33 @@ export function DashboardPage() {
                     runner={runnerMap[run.runner_id]}
                     assessment={assessmentMap[run.id]}
                     selected={selectedRunId === run.id}
-                    onClick={() => setSelectedRunId(run.id)}
+                    onClick={() => { setSelectedRunId(run.id); setSelectedRecordId(null); }}
+                  />
+                ))}
+                {pendingRuns.length > 0 && pendingRecords.length > 0 && (
+                  <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-[var(--sr-text-muted)]">
+                    Record submissions
+                  </p>
+                )}
+                {pendingRecords.map((record) => (
+                  <RecordListItem
+                    key={record.id}
+                    submission={record}
+                    game={gameMap[record.game_id]}
+                    competition={recordCatMap[record.category_id]}
+                    submitter={runnerMap[record.submitter_id]}
+                    selected={selectedRecordId === record.id}
+                    onClick={() => {
+                    setSelectedRecordId(record.id);
+                    setSelectedRunId(null);
+                    setRecordNotes(record.moderator_notes ?? '');
+                    setRejectReason('');
+                  }}
                   />
                 ))}
               </div>
             )
-          ) : recentRuns.length === 0 ? (
+          ) : recentRuns.length === 0 && recentRecords.length === 0 ? (
             <div className="sr-card p-6 text-center text-sm text-[var(--sr-text-muted)]">
               No reviewed runs yet.
             </div>
@@ -420,7 +674,28 @@ export function DashboardPage() {
                   runner={runnerMap[run.runner_id]}
                   assessment={assessmentMap[run.id]}
                   selected={selectedRunId === run.id}
-                  onClick={() => setSelectedRunId(run.id)}
+                  onClick={() => { setSelectedRunId(run.id); setSelectedRecordId(null); }}
+                />
+              ))}
+              {recentRuns.length > 0 && recentRecords.length > 0 && (
+                <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-[var(--sr-text-muted)]">
+                  Record submissions
+                </p>
+              )}
+              {recentRecords.map((record) => (
+                <RecordListItem
+                  key={record.id}
+                  submission={record}
+                  game={gameMap[record.game_id]}
+                  competition={recordCatMap[record.category_id]}
+                  submitter={runnerMap[record.submitter_id]}
+                  selected={selectedRecordId === record.id}
+                  onClick={() => {
+                    setSelectedRecordId(record.id);
+                    setSelectedRunId(null);
+                    setRecordNotes(record.moderator_notes ?? '');
+                    setRejectReason('');
+                  }}
                 />
               ))}
             </div>
@@ -429,7 +704,7 @@ export function DashboardPage() {
 
         {/* Detail panel */}
         <div className="lg:col-span-2">
-          {!selectedRun ? (
+          {!selectedRun && !selectedRecord ? (
             <div className="sr-card flex flex-col items-center justify-center p-12 text-center">
               <Brain className="h-12 w-12 text-[var(--sr-text-muted)]" />
               <p className="mt-3 text-[var(--sr-text)]">Select a submission to review</p>
@@ -437,7 +712,30 @@ export function DashboardPage() {
                 View the AI assessment, watch the proof video, and make a decision.
               </p>
             </div>
-          ) : (
+          ) : selectedRecord ? (
+            <RecordDetailPanel
+              key={selectedRecord.id}
+              submission={selectedRecord}
+              game={gameMap[selectedRecord.game_id]}
+              competition={recordCatMap[selectedRecord.category_id]}
+              submitter={runnerMap[selectedRecord.submitter_id]}
+              currentBest={recordBestMap[selectedRecord.category_id] ?? null}
+              holder={
+                recordBestMap[selectedRecord.category_id]
+                  ? runnerMap[recordBestMap[selectedRecord.category_id]!.submitter_id]
+                  : undefined
+              }
+              actionLoading={actionLoading}
+              rejectReason={rejectReason}
+              recordNotes={recordNotes}
+              onRejectReasonChange={setRejectReason}
+              onRecordNotesChange={setRecordNotes}
+              onVerify={() => handleVerifyRecord(selectedRecord.id)}
+              onReject={() => handleRejectRecord(selectedRecord.id)}
+              onSaveNotes={() => handleSaveRecordNotes(selectedRecord.id)}
+              onDelete={() => setPendingDeleteRecordId(selectedRecord.id)}
+            />
+          ) : selectedRun ? (
             <RunDetailPanel
               key={selectedRun.id}
               run={selectedRun}
@@ -460,7 +758,7 @@ export function DashboardPage() {
                 if (selectedRun) void handleToggleReference(selectedRun, refMap[selectedRun.id]?.label);
               }}
             />
-          )}
+          ) : null}
         </div>
       </div>
       <ConfirmationDialog
@@ -471,6 +769,15 @@ export function DashboardPage() {
         confirmLabel="Delete run"
         destructive
         onConfirm={() => { void confirmDeleteRun(); }}
+      />
+      <ConfirmationDialog
+        open={pendingDeleteRecordId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteRecordId(null); }}
+        title="Delete this record submission?"
+        description="This permanently deletes the submission and its moderator notes. Use it only for invalid or duplicate entries; otherwise past record holders stay in the history."
+        confirmLabel="Delete record"
+        destructive
+        onConfirm={() => { void confirmDeleteRecord(); }}
       />
     </div>
   );
@@ -546,6 +853,62 @@ function RunListItem({
           )}
         </div>
       )}
+    </button>
+  );
+}
+
+function RecordListItem({
+  submission,
+  game,
+  competition,
+  submitter,
+  selected,
+  onClick,
+}: {
+  submission: RecordSubmission;
+  game?: Game | undefined;
+  competition?: Category | undefined;
+  submitter?: Profile | undefined;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const statusBadge = {
+    pending: 'sr-badge-pending',
+    verified: 'sr-badge-ok',
+    rejected: 'sr-badge-rejected',
+  }[submission.status];
+
+  return (
+    <button
+      onClick={onClick}
+      className={`sr-card p-3 text-left transition-all ${
+        selected
+          ? 'border-[var(--sr-primary)] shadow-[0_0_12px_var(--sr-primary-glow)]'
+          : 'hover:border-[var(--sr-primary)]/50'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-sm font-semibold text-[var(--sr-text)]">
+          {game?.title ?? 'Unknown game'}
+        </span>
+        <span className={`sr-badge ${statusBadge} capitalize flex-shrink-0`}>
+          {submission.status}
+        </span>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--sr-text-muted)]">
+        <span className="inline-flex items-center gap-1">
+          <TrendingUp aria-hidden="true" className="h-3 w-3" />
+          Record
+        </span>
+        <span>·</span>
+        <span>{competition?.name ?? 'Unknown record'}</span>
+        <span>·</span>
+        <span>{submitter?.username ?? 'Unknown'}</span>
+        <span>·</span>
+        <span className="sr-mono text-[var(--sr-text)]">
+          {formatRecordWithUnit(Number(submission.value_numeric), competition?.record_unit)}
+        </span>
+      </div>
     </button>
   );
 }
@@ -850,6 +1213,287 @@ function RunDetailPanel({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function RecordDetailPanel({
+  submission,
+  game,
+  competition,
+  submitter,
+  currentBest,
+  holder,
+  actionLoading,
+  rejectReason,
+  recordNotes,
+  onRejectReasonChange,
+  onRecordNotesChange,
+  onVerify,
+  onReject,
+  onSaveNotes,
+  onDelete,
+}: {
+  submission: RecordSubmission;
+  game?: Game | undefined;
+  competition?: Category | undefined;
+  submitter?: Profile | undefined;
+  currentBest?: RecordSubmission | null | undefined;
+  holder?: Profile | undefined;
+  actionLoading: boolean;
+  rejectReason: string;
+  recordNotes: string;
+  onRejectReasonChange: (v: string) => void;
+  onRecordNotesChange: (v: string) => void;
+  onVerify: () => void;
+  onReject: () => void;
+  onSaveNotes: () => void;
+  onDelete: () => void;
+}) {
+  const videoId = parseYouTubeId(submission.video_url);
+  const embedUrl = videoId ? youtubeEmbedUrl(videoId) : '';
+  const higherIsBetter = competition?.record_higher_is_better ?? true;
+  const unit = competition?.record_unit ?? '';
+  const value = Number(submission.value_numeric);
+  const bestValue = currentBest ? Number(currentBest.value_numeric) : null;
+  const isCurrentRecord = currentBest?.id === submission.id;
+  const beatsCurrent =
+    bestValue === null
+      ? false
+      : compareRecordValues(value, bestValue, higherIsBetter) < 0;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Record header */}
+      <div className="sr-card p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-xl font-bold text-[var(--sr-text)]">
+                {game?.title ?? 'Unknown game'}
+              </h2>
+              {game && (
+                <a
+                  href={linkHref(`/games/${game.slug}`)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--sr-primary)] hover:text-[var(--sr-text)]"
+                >
+                  View game page
+                  <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </div>
+            <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--sr-text-muted)]">
+              <span className="inline-flex items-center gap-1">
+                <TrendingUp aria-hidden="true" className="h-3.5 w-3.5" />
+                {competition?.name ?? 'Unknown record'}
+              </span>
+              <span>·</span>
+              <span>{submitter?.username ?? 'Unknown player'}</span>
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="sr-mono text-2xl font-bold text-[var(--sr-primary)]">
+              {formatRecordWithUnit(value, unit)}
+            </p>
+            <p className="text-xs text-[var(--sr-text-muted)]">
+              {submission.platform} · {timeAgo(submission.created_at)}
+            </p>
+          </div>
+        </div>
+
+        {competition && (
+          <p className="mt-2 text-xs text-[var(--sr-text-muted)]">
+            {recordDirectionLabel(higherIsBetter)} · Measured in {unit || 'units'}
+          </p>
+        )}
+
+        {competition?.record_description && (
+          <p className="mt-3 text-sm text-[var(--sr-text-dim)]">
+            {competition.record_description}
+          </p>
+        )}
+        {competition?.record_rules && (
+          <div className="mt-3 flex items-start gap-2 rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface-2)] p-3 text-sm text-[var(--sr-text-dim)]">
+            <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--sr-primary)]" />
+            <div>
+              <span className="font-semibold text-[var(--sr-text)]">Record rules: </span>
+              {competition.record_rules}
+            </div>
+          </div>
+        )}
+        {submission.notes && (
+          <p className="mt-3 text-sm text-[var(--sr-text-dim)]">
+            <span className="font-semibold">Player notes: </span>
+            {submission.notes}
+          </p>
+        )}
+      </div>
+
+      {/* Comparison against the standing record */}
+      <div className="sr-card p-5">
+        <h3 className="mb-2 flex items-center gap-2 font-semibold text-[var(--sr-text)]">
+          <TrendingUp className="h-5 w-5 text-[var(--sr-primary)]" />
+          Compared to the current record
+        </h3>
+        {currentBest ? (
+          <div className="flex flex-col gap-2 text-sm">
+            <p className="text-[var(--sr-text-dim)]">
+              Current record:{' '}
+              <span className="sr-mono font-semibold text-[var(--sr-text)]">
+                {formatRecordWithUnit(bestValue ?? 0, unit)}
+              </span>{' '}
+              by {holder?.username ?? 'another player'}
+            </p>
+            {isCurrentRecord ? (
+              <p className="text-[var(--sr-primary)]">
+                This submission is the standing record.
+              </p>
+            ) : beatsCurrent ? (
+              <p className="text-[var(--sr-primary)]">
+                Approved, this would become the new record.
+              </p>
+            ) : (
+              <p className="text-[var(--sr-text-muted)]">
+                This value {bestValue !== null && value === bestValue ? 'ties' : 'does not beat'} the
+                current record.
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--sr-text-muted)]">
+            No approved record stands for this competition yet. The first approved value becomes
+            the record.
+          </p>
+        )}
+      </div>
+
+      {/* Video proof */}
+      <div className="sr-card overflow-hidden p-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Youtube className="h-5 w-5 text-red-500" />
+          <h3 className="font-semibold text-[var(--sr-text)]">Video proof</h3>
+          <a
+            href={submission.video_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto min-h-10 text-sm text-[var(--sr-primary)] hover:text-[var(--sr-link)]"
+          >
+            Open on YouTube
+          </a>
+        </div>
+        {videoId ? (
+          <div className="aspect-video w-full overflow-hidden rounded-md bg-black">
+            <iframe
+              src={embedUrl}
+              title="Record proof"
+              className="h-full w-full"
+              allowFullScreen
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--sr-danger)]">
+            Invalid YouTube URL. Cannot embed video.
+          </p>
+        )}
+      </div>
+
+      {/* Owner actions */}
+      <div className="sr-card p-5">
+        <h3 className="mb-3 flex items-center gap-2 font-semibold text-[var(--sr-text)]">
+          <ShieldCheck className="h-5 w-5 text-[var(--sr-primary)]" />
+          Owner decision
+        </h3>
+
+        {submission.status === 'pending' ? (
+          <>
+            <p className="mb-3 text-xs text-[var(--sr-text-muted)]">
+              Only approved records appear on the leaderboard. Check the value and proof before
+              approving.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={onVerify}
+                disabled={actionLoading}
+                className="sr-btn-primary"
+              >
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                Approve record
+              </button>
+              <button
+                onClick={onReject}
+                disabled={actionLoading || !rejectReason.trim()}
+                className="sr-btn-ghost border-[var(--sr-danger)]/40 text-[var(--sr-danger)] hover:bg-[var(--sr-bad-bg)]"
+              >
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <X className="h-4 w-4" />
+                )}
+                Reject record
+              </button>
+            </div>
+            <div className="mt-3">
+              <label className="mb-1 block text-xs text-[var(--sr-text-muted)]">
+                Rejection reason (required to reject)
+              </label>
+              <input
+                type="text"
+                value={rejectReason}
+                onChange={(e) => onRejectReasonChange(e.target.value)}
+                placeholder="e.g. Value not visible, wrong mode..."
+                className="sr-input"
+              />
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="sr-badge capitalize bg-[var(--sr-surface-2)] text-[var(--sr-text)]">
+              {submission.status}
+            </span>
+            {submission.rejection_reason && (
+              <span className="text-[var(--sr-danger)]">Reason: {submission.rejection_reason}</span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-4 border-t border-[var(--sr-border)] pt-4">
+          <label
+            htmlFor="record-moderator-notes"
+            className="mb-1 block text-sm font-semibold text-[var(--sr-text)]"
+          >
+            Moderator notes
+          </label>
+          <textarea
+            id="record-moderator-notes"
+            value={recordNotes}
+            onChange={(e) => onRecordNotesChange(e.target.value)}
+            rows={2}
+            placeholder="Internal notes about this record submission..."
+            className="sr-input resize-none"
+          />
+          <button
+            onClick={onSaveNotes}
+            disabled={actionLoading}
+            className="sr-btn-ghost mt-2"
+          >
+            <Save aria-hidden="true" className="h-4 w-4" />
+            Save notes
+          </button>
+        </div>
+
+        <button
+          onClick={onDelete}
+          disabled={actionLoading}
+          className="sr-btn-ghost mt-4 border-[var(--sr-danger)]/40 text-[var(--sr-danger)] hover:bg-[var(--sr-bad-bg)]"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete record permanently
+        </button>
+      </div>
     </div>
   );
 }

@@ -142,29 +142,44 @@ export type Database = {
       }
       categories: {
         Row: {
+          competition_type: string
           created_at: string
           game_id: string
           id: string
           name: string
           parent_category_id: string | null
+          record_description: string | null
+          record_higher_is_better: boolean
+          record_rules: string | null
+          record_unit: string | null
           sort_order: number
           timing_rules: string | null
         }
         Insert: {
+          competition_type?: string
           created_at?: string
           game_id: string
           id?: string
           name: string
           parent_category_id?: string | null
+          record_description?: string | null
+          record_higher_is_better?: boolean
+          record_rules?: string | null
+          record_unit?: string | null
           sort_order?: number
           timing_rules?: string | null
         }
         Update: {
+          competition_type?: string
           created_at?: string
           game_id?: string
           id?: string
           name?: string
           parent_category_id?: string | null
+          record_description?: string | null
+          record_higher_is_better?: boolean
+          record_rules?: string | null
+          record_unit?: string | null
           sort_order?: number
           timing_rules?: string | null
         }
@@ -406,6 +421,95 @@ export type Database = {
           },
         ]
       }
+      record_submissions: {
+        Row: {
+          category_id: string
+          created_at: string
+          game_id: string
+          id: string
+          moderator_notes: string | null
+          notes: string | null
+          platform: string
+          rejection_reason: string | null
+          status: string
+          submitter_id: string
+          value_numeric: number
+          verified_at: string | null
+          verified_by: string | null
+          video_end_seconds: number | null
+          video_id: string | null
+          video_start_seconds: number | null
+          video_url: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          game_id: string
+          id?: string
+          moderator_notes?: string | null
+          notes?: string | null
+          platform?: string
+          rejection_reason?: string | null
+          status?: string
+          submitter_id?: string
+          value_numeric: number
+          verified_at?: string | null
+          verified_by?: string | null
+          video_end_seconds?: number | null
+          video_id?: string | null
+          video_start_seconds?: number | null
+          video_url: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          game_id?: string
+          id?: string
+          moderator_notes?: string | null
+          notes?: string | null
+          platform?: string
+          rejection_reason?: string | null
+          status?: string
+          submitter_id?: string
+          value_numeric?: number
+          verified_at?: string | null
+          verified_by?: string | null
+          video_end_seconds?: number | null
+          video_id?: string | null
+          video_start_seconds?: number | null
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_submissions_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_submissions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_submissions_submitter_id_fkey"
+            columns: ["submitter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_submissions_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reserved_usernames: {
         Row: {
           name: string
@@ -531,6 +635,10 @@ export type Database = {
         Args: { p_username: string }
         Returns: string
       }
+      delete_record_submission: {
+        Args: { p_submission: string }
+        Returns: undefined
+      }
       delete_run: { Args: { p_run: string }; Returns: undefined }
       get_daily_challenge: { Args: never; Returns: Json }
       has_role: {
@@ -558,8 +666,16 @@ export type Database = {
         }
         Returns: string
       }
+      reject_record_submission: {
+        Args: { p_notes?: string | null; p_reason: string; p_submission: string }
+        Returns: undefined
+      }
       reject_run: {
         Args: { p_reason: string; p_run: string }
+        Returns: undefined
+      }
+      set_record_moderator_notes: {
+        Args: { p_notes: string; p_submission: string }
         Returns: undefined
       }
       reorder_categories: {
@@ -568,6 +684,10 @@ export type Database = {
       }
       set_member_role: {
         Args: { p_member: string; p_role: string }
+        Returns: undefined
+      }
+      verify_record_submission: {
+        Args: { p_notes?: string | null; p_submission: string }
         Returns: undefined
       }
       verify_run: { Args: { p_run: string }; Returns: undefined }

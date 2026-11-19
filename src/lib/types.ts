@@ -22,6 +22,13 @@ export interface Game {
   created_at: string;
 }
 
+/**
+ * A category is one competition inside a game. The competition type belongs to
+ * the category, never to the game, so a single game can run speedrun boards and
+ * record boards side by side.
+ */
+export type CompetitionType = 'speedrun' | 'record';
+
 export interface Category {
   id: string;
   game_id: string;
@@ -30,6 +37,13 @@ export interface Category {
   timing_rules: string | null;
   sort_order: number;
   created_at: string;
+  competition_type: CompetitionType;
+  /** Measurement unit for record competitions, e.g. "Kills". */
+  record_unit: string | null;
+  record_description: string | null;
+  record_rules: string | null;
+  /** Records are highest-wins by default; some boards are lower-is-better. */
+  record_higher_is_better: boolean;
 }
 
 export interface GameRequest {
@@ -64,6 +78,32 @@ export interface Run {
   created_at: string;
   // joined fields (optional)
   runner?: Profile;
+  game?: Game;
+  category?: Category;
+}
+
+export type RecordSubmissionStatus = 'pending' | 'verified' | 'rejected';
+
+export interface RecordSubmission {
+  id: string;
+  game_id: string;
+  category_id: string;
+  submitter_id: string;
+  value_numeric: number;
+  platform: string;
+  video_url: string;
+  video_id: string | null;
+  video_start_seconds: number | null;
+  video_end_seconds: number | null;
+  status: RecordSubmissionStatus;
+  rejection_reason: string | null;
+  moderator_notes: string | null;
+  notes: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  created_at: string;
+  // joined fields (optional)
+  submitter?: Profile;
   game?: Game;
   category?: Category;
 }

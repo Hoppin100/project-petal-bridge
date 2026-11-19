@@ -17,9 +17,10 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchGames } from '@/lib/games';
+import { fetchAllCompetitions, fetchGameCompetitions, isRecordCategory, COMPETITION_COLUMNS } from '@/lib/competitions';
 import { lookupSpeedrunGames } from '@/lib/speedrun-games.functions';
 import { useAuth } from '@/lib/auth';
-import type { Game, Category, GameRequest } from '@/lib/types';
+import type { Game, Category, GameRequest, CompetitionType } from '@/lib/types';
 import { linkHref } from '@/lib/router';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 
@@ -76,6 +77,7 @@ export function ManageGamesPage() {
     parentCategoryId: string | null;
     initialName?: string;
     initialTimingRules?: string | null;
+    initialRecord?: Category | null;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(null);
@@ -83,7 +85,16 @@ export function ManageGamesPage() {
   const [subcategoryClipboard, setSubcategoryClipboard] = useState<{
     sourceGameTitle: string;
     sourceCategoryName: string;
-    categories: Pick<Category, 'name' | 'timing_rules'>[];
+    categories: Pick<
+      Category,
+      | 'name'
+      | 'timing_rules'
+      | 'competition_type'
+      | 'record_unit'
+      | 'record_description'
+      | 'record_rules'
+      | 'record_higher_is_better'
+    >[];
   } | null>(null);
   const [categoryClipboardNotice, setCategoryClipboardNotice] = useState<string | null>(null);
   const [pastingIntoCategoryId, setPastingIntoCategoryId] = useState<string | null>(null);
@@ -95,20 +106,17 @@ export function ManageGamesPage() {
     // Read every game's categories in one pass so each row can show its
     // category count straight away instead of only after being expanded.
     if (gameList.length) {
-      const { data, error: categoriesError } = await supabase
-        .from('categories')
-        .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at')
-        .in('game_id', gameList.map((game) => game.id))
-        .order('sort_order')
-        .order('name');
+      const { categories, error: categoriesError } = await fetchAllCompetitions(
+        gameList.map((game) => game.id)
+      );
       if (categoriesError) {
         console.error('load categories failed', categoriesError);
-        setError(`Could not load categories: ${categoriesError.message}`);
+        setError(`Could not load categories: ${categoriesError}`);
         setLoading(false);
         return;
       }
       const grouped: Record<string, Category[]> = {};
-      for (const category of (data as Category[]) ?? []) {
+      for (const category of categories) {
         (grouped[category.game_id] ??= []).push(category);
       }
       for (const gameId of Object.keys(grouped)) {
@@ -122,18 +130,13 @@ export function ManageGamesPage() {
   }, []);
 
   const loadCategories = useCallback(async (gameId: string) => {
-    const { data, error: categoriesError } = await supabase
-      .from('categories')
-      .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at')
-      .eq('game_id', gameId)
-      .order('sort_order')
-      .order('name');
+    const { categories, error: categoriesError } = await fetchGameCompetitions(gameId);
     if (categoriesError) {
       console.error('load categories failed', categoriesError);
-      setError(`Could not load categories: ${categoriesError.message}`);
+      setError(`Could not load categories: ${categoriesError}`);
       return;
     }
-    setCategoryMap((prev) => ({ ...prev, [gameId]: orderCategories((data as Category[]) ?? []) }));
+    setCategoryMap((prev) => ({ ...prev, [gameId]: orderCategories(categories) }));
   }, []);
 
   const loadRequests = useCallback(async () => {
@@ -269,6 +272,7 @@ export function ManageGamesPage() {
       parentCategoryId: category.parent_category_id,
       initialName: copyName,
       initialTimingRules: category.timing_rules,
+      initialRecord: isRecordCategory(category) ? category : null,
     });
     setCategoryClipboardNotice(`Choose a destination category and save to create "${copyName}".`);
   }
@@ -276,7 +280,15 @@ export function ManageGamesPage() {
   function copySubcategories(game: Game, parent: Category) {
     const subcategories = (categoryMap[game.id] ?? [])
       .filter((category) => category.parent_category_id === parent.id)
-      .map(({ name, timing_rules }) => ({ name, timing_rules }));
+      .map((category) => ({
+        name: category.name,
+        timing_rules: category.timing_rules,
+        competition_type: category.competition_type,
+        record_unit: category.record_unit,
+        record_description: category.record_description,
+        record_rules: category.record_rules,
+        record_higher_is_better: category.record_higher_is_better,
+      }));
     if (subcategories.length === 0) return;
 
     setError(null);
@@ -301,7 +313,17 @@ export function ManageGamesPage() {
     setSubcategoryClipboard({
       sourceGameTitle: game.title,
       sourceCategoryName: parent.name,
-      categories: [{ name: category.name, timing_rules: category.timing_rules }],
+      categories: [
+        {
+          name: category.name,
+          timing_rules: category.timing_rules,
+          competition_type: category.competition_type,
+          record_unit: category.record_unit,
+          record_description: category.record_description,
+          record_rules: category.record_rules,
+          record_higher_is_better: category.record_higher_is_better,
+        },
+      ],
     });
     setCategoryClipboardNotice(
       `Copied subcategory "${category.name}" from "${game.title}" â†’ "${parent.name}". Choose Paste on a destination category.`
@@ -315,15 +337,12 @@ export function ManageGamesPage() {
     setCategoryClipboardNotice(null);
     setPastingIntoCategoryId(parent.id);
     try {
-      const { data: existingCategories, error: loadError } = await supabase
-        .from('categories')
-        .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at')
-        .eq('game_id', game.id)
-        .order('sort_order')
-        .order('name');
-      if (loadError) throw loadError;
+      const { categories: existingCategories, error: loadError } = await fetchGameCompetitions(
+        game.id
+      );
+      if (loadError) throw new Error(loadError);
 
-      const currentCategories = (existingCategories as Category[]) ?? [];
+      const currentCategories = existingCategories;
       const lastSortOrder = Math.max(
         0,
         ...currentCategories
@@ -335,14 +354,27 @@ export function ManageGamesPage() {
         parent_category_id: parent.id,
         name: category.name,
         timing_rules: category.timing_rules,
+        competition_type: category.competition_type,
+        record_unit: category.record_unit,
+        record_description: category.record_description,
+        record_rules: category.record_rules,
+        record_higher_is_better: category.record_higher_is_better,
         sort_order: lastSortOrder + (index + 1) * 10,
       }));
       const { data: insertedCategories, error: insertError } = await supabase
         .from('categories')
         .insert(rows)
-        .select('id, game_id, parent_category_id, name, timing_rules, sort_order, created_at');
+        .select(COMPETITION_COLUMNS);
       if (insertError) throw insertError;
-      const inserted = (insertedCategories as Category[]) ?? [];
+      const inserted = ((insertedCategories as Partial<Category>[]) ?? []).map((category) => ({
+        ...category,
+        competition_type:
+          category.competition_type === 'record' ? ('record' as const) : ('speedrun' as const),
+        record_unit: category.record_unit ?? null,
+        record_description: category.record_description ?? null,
+        record_rules: category.record_rules ?? null,
+        record_higher_is_better: category.record_higher_is_better ?? true,
+      })) as Category[];
       if (
         inserted.length !== rows.length ||
         inserted.some(
@@ -526,6 +558,9 @@ export function ManageGamesPage() {
           {games.map((game) => {
             const cats = categoryMap[game.id] ?? [];
             const expanded = expandedGameId === game.id;
+            const mainCats = cats.filter((category) => !category.parent_category_id);
+            const speedrunCount = mainCats.filter((category) => !isRecordCategory(category)).length;
+            const recordCount = mainCats.filter((category) => isRecordCategory(category)).length;
             return (
               <div key={game.id} className="sr-card overflow-hidden">
                 <div className="flex flex-col items-stretch gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
@@ -554,7 +589,8 @@ export function ManageGamesPage() {
                       )}
                     </div>
                     <p className="truncate text-xs text-[var(--sr-text-muted)]">
-                      /{game.slug} · {cats.filter((category) => !category.parent_category_id).length || '—'} categories
+                      /{game.slug} · {speedrunCount} speedrun{speedrunCount === 1 ? '' : 's'} ·{' '}
+                      {recordCount} record{recordCount === 1 ? '' : 's'}
                     </p>
                     {game.blurb && (
                       <p className="truncate text-sm text-[var(--sr-text)]/60 mt-0.5">{game.blurb}</p>
@@ -602,7 +638,7 @@ export function ManageGamesPage() {
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <h4 className="text-sm font-semibold text-[var(--sr-text)]">Categories and subcategories</h4>
-                        <p className="mt-0.5 max-w-2xl text-xs leading-5 text-[var(--sr-text-muted)]">Top-level categories appear as leaderboard tabs. Add subcategories for variants such as glitch rules or platform-specific boards.</p>
+                        <p className="mt-0.5 max-w-2xl text-xs leading-5 text-[var(--sr-text-muted)]">Every category is its own competition: a timed speedrun board or a numeric record board. One game can hold as many of each as you like.</p>
                         {reorderingGameId === game.id && (
                           <p role="status" className="mt-1 inline-flex items-center gap-1.5 text-xs text-[var(--sr-primary)]">
                             <Loader2 className="h-3 w-3 animate-spin" /> Saving new order
@@ -649,17 +685,39 @@ export function ManageGamesPage() {
                               </div>
                               <span className="sr-mono flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm bg-[var(--sr-surface-2)] text-xs font-semibold text-[var(--sr-primary)]">{cat.parent_category_id ? 'â†³' : String(index + 1).padStart(2, '0')}</span>
                               <div className="min-w-0">
-                                <p className="text-sm font-semibold text-[var(--sr-text)]">{cat.name}</p>
+                                <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-[var(--sr-text)]">
+                                  {cat.name}
+                                  <span
+                                    className={`sr-badge ${
+                                      isRecordCategory(cat)
+                                        ? 'bg-[var(--sr-surface-2)] text-[var(--sr-text-dim)]'
+                                        : 'bg-[var(--sr-primary)]/15 text-[var(--sr-primary)]'
+                                    }`}
+                                  >
+                                    {isRecordCategory(cat) ? 'Record' : 'Speedrun'}
+                                  </span>
+                                  {isRecordCategory(cat) && cat.record_unit && (
+                                    <span className="sr-mono text-xs font-normal text-[var(--sr-text-muted)]">
+                                      {cat.record_unit} · {cat.record_higher_is_better ? 'highest wins' : 'lowest wins'}
+                                    </span>
+                                  )}
+                                </p>
                                 {cat.parent_category_id && (
                                   <p className="text-xs text-[var(--sr-text-muted)]">
                                     Subcategory of {cats.find((item) => item.id === cat.parent_category_id)?.name ?? 'unknown category'}
                                   </p>
                                 )}
-                                {cat.timing_rules && (
-                                  <p className="truncate text-xs text-[var(--sr-text-muted)]">
-                                    {cat.timing_rules}
-                                  </p>
-                                )}
+                                {isRecordCategory(cat)
+                                  ? cat.record_rules && (
+                                      <p className="truncate text-xs text-[var(--sr-text-muted)]">
+                                        {cat.record_rules}
+                                      </p>
+                                    )
+                                  : cat.timing_rules && (
+                                      <p className="truncate text-xs text-[var(--sr-text-muted)]">
+                                        {cat.timing_rules}
+                                      </p>
+                                    )}
                               </div>
                             </div>
                             <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-1">
@@ -705,7 +763,7 @@ export function ManageGamesPage() {
                                 <>
                                   <button
                                     type="button"
-                                    onClick={() => setShowCatModal({ gameId: game.id, cat: null, parentCategoryId: cat.id })}
+                                    onClick={() => setShowCatModal({ gameId: game.id, cat: null, parentCategoryId: cat.id, initialRecord: isRecordCategory(cat) ? cat : null })}
                                     aria-label={`Add subcategory under ${cat.name}`}
                                     className="rounded-md px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
                                   >
@@ -777,6 +835,7 @@ export function ManageGamesPage() {
           category={showCatModal.cat}
           initialName={showCatModal.initialName}
           initialTimingRules={showCatModal.initialTimingRules}
+          initialRecord={showCatModal.initialRecord ?? null}
           existingCategories={categoryMap[showCatModal.gameId] ?? []}
           parentCategories={(categoryMap[showCatModal.gameId] ?? []).filter((category) => !category.parent_category_id)}
           initialParentCategoryId={showCatModal.parentCategoryId}
@@ -1202,7 +1261,7 @@ function GameModal({
             <section className="rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface-2)]/50 p-4">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <h3 className="text-sm font-semibold text-[var(--sr-text)]">
-                  Leaderboard categories <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
+                  Speedrun competitions <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
                 </h3>
                 <span className="text-xs text-[var(--sr-text-muted)]">
                   {categoryNames.split('\n').filter((name) => name.trim()).length} added
@@ -1219,7 +1278,7 @@ function GameModal({
                 aria-describedby="initial-categories-help"
               />
               <p id="initial-categories-help" className="mt-1 text-xs leading-5 text-[var(--sr-text-muted)]">
-                Each line becomes a main leaderboard. Add timing rules or subcategories after creating the game.
+                Each line becomes a timed speedrun board. Open the game after creating it to add records, timing rules, or subcategories.
               </p>
             </section>
           )}
@@ -1248,6 +1307,7 @@ function CategoryModal({
   category,
   initialName,
   initialTimingRules,
+  initialRecord,
   existingCategories,
   parentCategories,
   initialParentCategoryId,
@@ -1256,8 +1316,9 @@ function CategoryModal({
 }: {
   gameId: string;
   category: Category | null;
-  initialName?: string;
-  initialTimingRules?: string | null;
+  initialName?: string | undefined;
+  initialTimingRules?: string | null | undefined;
+  initialRecord?: Category | null | undefined;
   existingCategories: Category[];
   parentCategories: Category[];
   initialParentCategoryId: string | null;
@@ -1265,12 +1326,38 @@ function CategoryModal({
   onSaved: (keepAdding: boolean) => Promise<void>;
 }) {
   const [name, setName] = useState(initialName ?? category?.name ?? '');
+  const [competitionType, setCompetitionType] = useState<CompetitionType>(
+    category?.competition_type ?? initialRecord?.competition_type ?? 'speedrun'
+  );
   const [timingRules, setTimingRules] = useState(initialTimingRules ?? category?.timing_rules ?? '');
+  const [recordUnit, setRecordUnit] = useState(
+    category?.record_unit ?? initialRecord?.record_unit ?? ''
+  );
+  const [recordDescription, setRecordDescription] = useState(
+    category?.record_description ?? initialRecord?.record_description ?? ''
+  );
+  const [recordRules, setRecordRules] = useState(
+    category?.record_rules ?? initialRecord?.record_rules ?? ''
+  );
+  const [recordHigherIsBetter, setRecordHigherIsBetter] = useState(
+    category?.record_higher_is_better ?? initialRecord?.record_higher_is_better ?? true
+  );
   const [sharedCategoryIds, setSharedCategoryIds] = useState<string[]>([]);
   const [parentCategoryId, setParentCategoryId] = useState(initialParentCategoryId ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
+
+  const isRecord = competitionType === 'record';
+  // Levels may only group competitions of the same type, so a record board can
+  // never be nested under a speedrun board (or the other way around).
+  const compatibleParents = parentCategories.filter(
+    (parent) =>
+      parent.id !== category?.id && !isRecordCategory(parent) === !isRecord
+  );
+  const sharedRuleTargets = existingCategories.filter(
+    (item) => item.id !== category?.id && !isRecordCategory(item)
+  );
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -1283,8 +1370,17 @@ function CategoryModal({
       setError('Category name is required.');
       return;
     }
-    if (parentCategoryId && !parentCategories.some((parent) => parent.id === parentCategoryId)) {
-      setError('Select a valid main category for this subcategory.');
+    const trimmedUnit = recordUnit.trim();
+    if (isRecord && !trimmedUnit) {
+      setError('Records need a measurement unit, such as Kills, Points, or Wins.');
+      return;
+    }
+    if (parentCategoryId && !compatibleParents.some((parent) => parent.id === parentCategoryId)) {
+      setError(
+        isRecord
+          ? 'Select a valid record competition to group this record under.'
+          : 'Select a valid main category for this subcategory.'
+      );
       return;
     }
     const targetParentId = parentCategoryId || null;
@@ -1310,9 +1406,14 @@ function CategoryModal({
       const payload = {
         game_id: gameId,
         name: trimmedName,
-        timing_rules: timingRules.trim() || null,
+        timing_rules: isRecord ? null : timingRules.trim() || null,
         sort_order: categorySortOrder,
         parent_category_id: targetParentId,
+        competition_type: competitionType,
+        record_unit: isRecord ? trimmedUnit : null,
+        record_description: isRecord ? recordDescription.trim() || null : null,
+        record_rules: isRecord ? recordRules.trim() || null : null,
+        record_higher_is_better: isRecord ? recordHigherIsBetter : true,
       };
       let savedCategoryId = category?.id;
       if (category) {
@@ -1345,7 +1446,9 @@ function CategoryModal({
         savedCategoryId = insertedCategory.id;
       }
 
-      const categoriesToUpdate = sharedCategoryIds.filter((id) => id !== savedCategoryId);
+      const categoriesToUpdate = isRecord
+        ? []
+        : sharedCategoryIds.filter((id) => id !== savedCategoryId);
       if (categoriesToUpdate.length > 0) {
         const { error: sharedRulesError } = await supabase
           .from('categories')
@@ -1358,6 +1461,9 @@ function CategoryModal({
       if (keepAdding) {
         setName('');
         setTimingRules('');
+        setRecordUnit('');
+        setRecordDescription('');
+        setRecordRules('');
         setSharedCategoryIds([]);
         setSavedNotice('Category added. You can add another or close this form.');
       }
@@ -1371,6 +1477,22 @@ function CategoryModal({
       if (detail.includes('categories_game_id_name_key')) {
         setError(
           'The database still blocks duplicate category names. Apply drizzle/migrations/0006_allow_duplicate_subcategories.sql to the project database, then try again.'
+        );
+        return;
+      }
+      if (/(competition_type|record_unit|record_description|record_rules|record_higher_is_better)/i.test(detail)) {
+        setError(
+          'The database is missing competition type support. Apply drizzle/migrations/0009_competition_types.sql to the project database, then try again.'
+        );
+        return;
+      }
+      if (detail.includes('must target a speedrun competition') || detail.includes('must target a record competition')) {
+        setError('This competition already has submissions of the other type. Delete them or keep the current type.');
+        return;
+      }
+      if (detail.includes('already has speedrun submissions') || detail.includes('already has record submissions')) {
+        setError(
+          'This competition already has submissions, so its type cannot change. Create a new competition instead.'
         );
         return;
       }
@@ -1398,7 +1520,17 @@ function CategoryModal({
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 id="category-modal-title" className="text-xl font-bold text-[var(--sr-text)]">
-              {category ? (category.parent_category_id ? 'Edit subcategory' : 'Edit category') : 'New category'}
+              {category
+                ? isRecord
+                  ? 'Edit record'
+                  : category.parent_category_id
+                    ? 'Edit subcategory'
+                    : 'Edit category'
+                : isRecord
+                  ? initialParentCategoryId
+                    ? 'New record variant'
+                    : 'New record'
+                  : 'New category'}
             </h2>
             <p className="mt-1 text-xs text-[var(--sr-text-muted)]">Choose how runners will find and compare these runs.</p>
           </div>
@@ -1408,82 +1540,216 @@ function CategoryModal({
         </div>
 
         <form onSubmit={handleSave} className="flex flex-col gap-4">
+          <fieldset>
+            <legend className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
+              Competition type <span className="text-[var(--sr-primary)]">Required</span>
+            </legend>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {(['speedrun', 'record'] as CompetitionType[]).map((type) => {
+                const selected = competitionType === type;
+                return (
+                  <label
+                    key={type}
+                    className={`flex cursor-pointer items-start gap-2 border px-3 py-2.5 text-sm transition-colors ${
+                      selected
+                        ? 'border-[var(--sr-primary)] bg-[var(--sr-primary)]/10'
+                        : 'border-[var(--sr-border)] hover:border-[var(--sr-border-hover)]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="competition-type"
+                      value={type}
+                      checked={selected}
+                      onChange={() => {
+                        setCompetitionType(type);
+                        if (type === 'record') setSharedCategoryIds([]);
+                      }}
+                      className="mt-0.5 accent-[var(--sr-primary)]"
+                    />
+                    <span>
+                      <span className="block font-semibold text-[var(--sr-text)]">
+                        {type === 'record' ? 'Record' : 'Speedrun'}
+                      </span>
+                      <span className="text-xs text-[var(--sr-text-muted)]">
+                        {type === 'record'
+                          ? 'Numeric value wins. No time formatting.'
+                          : 'Timed leaderboard, exactly like existing categories.'}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-xs text-[var(--sr-text-muted)]">
+              This only applies to this competition. The game can hold both types.
+            </p>
+          </fieldset>
+
           <div>
             <label htmlFor="category-name" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
-              Category name <span className="text-[var(--sr-primary)]">Required</span>
+              {isRecord ? 'Record name' : 'Category name'} <span className="text-[var(--sr-primary)]">Required</span>
             </label>
             <input
               id="category-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Any%, Glitchless, All bosses"
+              placeholder={
+                isRecord
+                  ? 'e.g. Most Kills in One Match, Highest Score'
+                  : 'e.g. Any%, Glitchless, All bosses'
+              }
               className="sr-input"
               autoFocus
               required
             />
             <p className="mt-1 text-xs text-[var(--sr-text-muted)]">
-              Keep categories distinct; use one leaderboard format per category.
+              {isRecord
+                ? 'Each record gets its own leaderboard with the same rules for every player.'
+                : 'Keep categories distinct; use one leaderboard format per category.'}
             </p>
           </div>
 
-          <div>
-            <label htmlFor="category-rules" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
-              Timing rules <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
-            </label>
-            <textarea
-              id="category-rules"
-              value={timingRules}
-              onChange={(e) => setTimingRules(e.target.value)}
-              rows={2}
-              placeholder="Explain what counts as a valid run and how it should be timed."
-              className="sr-input resize-none"
-            />
-            <p className="mt-1 text-xs text-[var(--sr-text-muted)]">
-              Shown to runners and used by the verification assistant.
-            </p>
-          </div>
-
-          {existingCategories.filter((item) => item.id !== category?.id).length > 0 && (
-            <fieldset className="rounded-md border border-[var(--sr-border)] p-3">
-              <legend className="px-1 text-sm font-medium text-[var(--sr-text)]">
-                Use these timing rules for other categories
-              </legend>
-              <p className="mb-2 text-xs text-[var(--sr-text-muted)]">
-                Selected categories will be updated to use the timing rules above.
-              </p>
-              <div className="flex max-h-36 flex-col gap-2 overflow-y-auto">
-                {existingCategories
-                  .filter((item) => item.id !== category?.id)
-                  .map((item) => (
-                    <label key={item.id} className="flex items-center gap-2 text-sm text-[var(--sr-text)]">
-                      <input
-                        type="checkbox"
-                        checked={sharedCategoryIds.includes(item.id)}
-                        onChange={(event) => {
-                          setSharedCategoryIds((current) =>
-                            event.target.checked
-                              ? [...current, item.id]
-                              : current.filter((id) => id !== item.id)
-                          );
-                        }}
-                        className="accent-[var(--sr-primary)]"
-                      />
-                      {item.name}
-                      {item.parent_category_id && (
-                        <span className="text-[var(--sr-text-muted)]">
-                          {' '}(under {existingCategories.find((parent) => parent.id === item.parent_category_id)?.name ?? 'unknown category'})
-                        </span>
-                      )}
-                    </label>
-                  ))}
+          {isRecord ? (
+            <>
+              <div>
+                <label htmlFor="record-description" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
+                  Description <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
+                </label>
+                <textarea
+                  id="record-description"
+                  value={recordDescription}
+                  onChange={(e) => setRecordDescription(e.target.value)}
+                  rows={2}
+                  placeholder="What the record measures, e.g. eliminations in a single match."
+                  className="sr-input resize-none"
+                />
               </div>
-            </fieldset>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="record-unit" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
+                    Measurement unit <span className="text-[var(--sr-primary)]">Required</span>
+                  </label>
+                  <input
+                    id="record-unit"
+                    type="text"
+                    list="record-unit-options"
+                    value={recordUnit}
+                    onChange={(e) => setRecordUnit(e.target.value)}
+                    placeholder="Kills, Wins, Points..."
+                    className="sr-input"
+                    maxLength={24}
+                    required
+                  />
+                  <datalist id="record-unit-options">
+                    {['Kills', 'Wins', 'Points', 'Score', 'Damage', 'Distance', 'Streak', 'Level', 'Goals'].map(
+                      (unit) => (
+                        <option key={unit} value={unit} />
+                      )
+                    )}
+                  </datalist>
+                  <p className="mt-1 text-xs text-[var(--sr-text-muted)]">
+                    Shown next to every submitted value.
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="record-direction" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
+                    Leaderboard order
+                  </label>
+                  <select
+                    id="record-direction"
+                    value={recordHigherIsBetter ? 'higher' : 'lower'}
+                    onChange={(event) => setRecordHigherIsBetter(event.target.value === 'higher')}
+                    className="sr-input"
+                  >
+                    <option value="higher">Highest value wins</option>
+                    <option value="lower">Lowest value wins</option>
+                  </select>
+                  <p className="mt-1 text-xs text-[var(--sr-text-muted)]">
+                    Most records are highest-wins. Pick lowest-wins for stats like times or deaths.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="record-rules" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
+                  Rules and restrictions <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
+                </label>
+                <textarea
+                  id="record-rules"
+                  value={recordRules}
+                  onChange={(e) => setRecordRules(e.target.value)}
+                  rows={3}
+                  placeholder="Game mode, difficulty, allowed loadouts, or anything reviewers must check."
+                  className="sr-input resize-none"
+                />
+                <p className="mt-1 text-xs text-[var(--sr-text-muted)]">
+                  Shown to players when they submit and to owners while reviewing.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label htmlFor="category-rules" className="mb-1 block text-sm font-medium text-[var(--sr-text)]">
+                  Timing rules <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
+                </label>
+                <textarea
+                  id="category-rules"
+                  value={timingRules}
+                  onChange={(e) => setTimingRules(e.target.value)}
+                  rows={2}
+                  placeholder="Explain what counts as a valid run and how it should be timed."
+                  className="sr-input resize-none"
+                />
+                <p className="mt-1 text-xs text-[var(--sr-text-muted)]">
+                  Shown to runners and used by the verification assistant.
+                </p>
+              </div>
+
+              {sharedRuleTargets.length > 0 && (
+                <fieldset className="rounded-md border border-[var(--sr-border)] p-3">
+                  <legend className="px-1 text-sm font-medium text-[var(--sr-text)]">
+                    Use these timing rules for other categories
+                  </legend>
+                  <p className="mb-2 text-xs text-[var(--sr-text-muted)]">
+                    Selected categories will be updated to use the timing rules above.
+                  </p>
+                  <div className="flex max-h-36 flex-col gap-2 overflow-y-auto">
+                    {sharedRuleTargets.map((item) => (
+                      <label key={item.id} className="flex items-center gap-2 text-sm text-[var(--sr-text)]">
+                        <input
+                          type="checkbox"
+                          checked={sharedCategoryIds.includes(item.id)}
+                          onChange={(event) => {
+                            setSharedCategoryIds((current) =>
+                              event.target.checked
+                                ? [...current, item.id]
+                                : current.filter((id) => id !== item.id)
+                            );
+                          }}
+                          className="accent-[var(--sr-primary)]"
+                        />
+                        {item.name}
+                        {item.parent_category_id && (
+                          <span className="text-[var(--sr-text-muted)]">
+                            {' '}(under {existingCategories.find((parent) => parent.id === item.parent_category_id)?.name ?? 'unknown category'})
+                          </span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+            </>
           )}
 
           <div>
             <label className="mb-1 block text-sm font-medium text-[var(--sr-text)]" htmlFor="parent-category">
-              Category level
+              {isRecord ? 'Group under an existing record' : 'Category level'}
             </label>
             <select
               id="parent-category"
@@ -1491,14 +1757,18 @@ function CategoryModal({
               onChange={(event) => setParentCategoryId(event.target.value)}
               className="sr-input"
             >
-              <option value="">Main leaderboard</option>
-              {parentCategories
-                .filter((parent) => parent.id !== category?.id)
-                .map((parent) => (
-                  <option key={parent.id} value={parent.id}>Subcategory of {parent.name}</option>
-                ))}
+              <option value="">{isRecord ? 'Standalone record' : 'Main leaderboard'}</option>
+              {compatibleParents.map((parent) => (
+                <option key={parent.id} value={parent.id}>
+                  {isRecord ? `Grouped under ${parent.name}` : `Subcategory of ${parent.name}`}
+                </option>
+              ))}
             </select>
-            <p className="mt-1 text-xs text-[var(--sr-text-muted)]">Use subcategories for separate rule sets or platform variants under a main category.</p>
+            <p className="mt-1 text-xs text-[var(--sr-text-muted)]">
+              {isRecord
+                ? 'Optional. Use this for game modes or variants that belong with another record.'
+                : 'Use subcategories for separate rule sets or platform variants under a main category.'}
+            </p>
           </div>
 
           {error && (
@@ -1513,7 +1783,7 @@ function CategoryModal({
             <button type="button" onClick={onClose} disabled={saving} className="sr-btn-ghost">Cancel</button>
             <button type="submit" name="category-action" value="save" disabled={saving} className="sr-btn-primary">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? 'Saving…' : category ? 'Save changes' : 'Add category'}
+              {saving ? 'Saving…' : category ? 'Save changes' : isRecord ? 'Add record' : 'Add category'}
             </button>
             {!category && (
               <button type="submit" name="category-action" value="save-another" disabled={saving} className="sr-btn-ghost">
