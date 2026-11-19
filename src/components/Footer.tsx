@@ -2,21 +2,17 @@ import { Logo } from '@/components/Logo';
 import { useAuth } from '@/lib/auth';
 import { linkHref } from '@/lib/router';
 
-export function Footer({ launchLocked = false }: { launchLocked?: boolean }) {
+export function Footer() {
   const { profile } = useAuth();
 
   const internalLinks = [
     { label: 'Home', href: linkHref('/') },
-    ...(!launchLocked
-      ? [
-          { label: 'Games', href: linkHref('/games') },
-          ...(profile?.role === 'owner'
-            ? [{ label: 'Daily Challenge', href: linkHref('/daily-challenge') }]
-            : []),
-          { label: 'Submit a run', href: linkHref('/submit') },
-          { label: 'Request a game', href: linkHref('/request-game') },
-        ]
+    { label: 'Games', href: linkHref('/games') },
+    ...(profile?.role === 'owner'
+      ? [{ label: 'Daily Challenge', href: linkHref('/daily-challenge') }]
       : []),
+    { label: 'Submit a run', href: linkHref('/submit') },
+    { label: 'Request a game', href: linkHref('/request-game') },
   ];
 
   return (
