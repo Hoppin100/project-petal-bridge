@@ -27,7 +27,21 @@ vi.mock('@/lib/supabase', () => ({
   },
 }));
 
-import { fetchGames } from '@/lib/games';
+import { fetchGames, isComingSoonGame } from '@/lib/games';
+
+describe('coming soon detection', () => {
+  it.each(['GTA 6', 'GTA VI', 'Grand Theft Auto 6', 'Grand Theft Auto VI'])(
+    'recognizes %s',
+    (title) => {
+      expect(isComingSoonGame({ title })).toBe(true);
+    },
+  );
+
+  it('does not match other games', () => {
+    expect(isComingSoonGame({ title: 'Grand Theft Auto V' })).toBe(false);
+    expect(isComingSoonGame({ title: 'Red Dead Redemption 2' })).toBe(false);
+  });
+});
 
 describe('fetchGames migration compatibility', () => {
   beforeEach(() => {

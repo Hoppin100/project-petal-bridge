@@ -8,6 +8,8 @@ import { RecordLeaderboard } from '@/components/RecordLeaderboard';
 import { linkHref } from '@/lib/router';
 import { formatTime } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
+import { isComingSoonGame } from '@/lib/games';
+import { useOwnerPreview } from '@/lib/preview';
 import { isSlowerIsBetterGame } from '@/lib/game-rules';
 import {
   RECORD_SUBMISSION_COLUMNS,
@@ -35,6 +37,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   const [underConstruction, setUnderConstruction] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [recordsUnavailable, setRecordsUnavailable] = useState(false);
+  const ownerPreview = useOwnerPreview();
   const slowerIsBetter =
     profile?.role === 'owner' && game ? isSlowerIsBetterGame(game, true) : false;
 
@@ -158,7 +161,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
 
   // Record leaderboard for the selected record competition.
   useEffect(() => {
-    if (!activeRecordId) {
+    if (!ownerPreview || !activeRecordId) {
       setRecordSubmissions([]);
       return;
     }
@@ -203,7 +206,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [activeRecordId]);
+  }, [activeRecordId, ownerPreview]);
 
   if (loading || authLoading) {
     return (
@@ -257,7 +260,9 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   }
 
   const speedrunCategories = competitions.filter((category) => !isRecordCategory(category));
-  const recordCategories = competitions.filter((category) => isRecordCategory(category));
+  const recordCategories = ownerPreview
+    ? competitions.filter((category) => isRecordCategory(category))
+    : [];
   const activeSpeedrun = speedrunCategories.find((c) => c.id === activeSpeedrunId);
   const activeRecord = recordCategories.find((c) => c.id === activeRecordId);
   const mainSpeedruns = speedrunCategories.filter((category) => !category.parent_category_id);
@@ -269,6 +274,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   );
   const recordMainCategories = recordCategories.filter((category) => !category.parent_category_id);
   const worldRecord = runs[0];
+  const comingSoon = !ownerPreview && isComingSoonGame(game);
 
   return (
     <div className="sr-container pb-12">
@@ -300,15 +306,31 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
               <h1 className="text-2xl font-bold sm:text-4xl">
                 {game.title}
               </h1>
+              {comingSoon && (
+                <p className="mt-2 inline-flex rounded-sm bg-[var(--sr-warn)] px-2 py-1 text-xs font-bold uppercase tracking-wide text-black">
+                  Coming soon
+                </p>
+              )}
               {game.blurb && (
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--sr-text-dim)]">
                   {game.blurb}
                 </p>
               )}
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-                <a href={linkHref(`/submit?game=${game.id}`)} className="sr-btn-primary">
-                  Submit a run
-                </a>
+                {comingSoon ? (
+                  <div>
+                    <button type="button" disabled className="sr-btn-primary cursor-not-allowed opacity-60">
+                      Submit a run
+                    </button>
+                    <p role="status" className="mt-2 text-sm text-[var(--sr-warn)]">
+                      Cannot submit a run yet — {game.title} hasn’t been released.
+                    </p>
+                  </div>
+                ) : (
+                  <a href={linkHref(`/submit?game=${game.id}`)} className="sr-btn-primary">
+                    Submit a run
+                  </a>
+                )}
                 {game.page_url && (
                   <a
                     href={game.page_url}
@@ -345,18 +367,20 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
 
       {speedrunCategories.length > 0 && (
         <section className="sr-panel mt-6 p-4 sm:p-5" aria-label="Speedrun leaderboards">
-          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-            <div>
-              <p className="sr-eyebrow flex items-center gap-2">
-                <Timer aria-hidden="true" className="h-3.5 w-3.5" />
-                Speedruns
-              </p>
-              <h2 className="text-lg font-bold">Timed leaderboards</h2>
+          {ownerPreview && (
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+              <div>
+                <p className="sr-eyebrow flex items-center gap-2">
+                  <Timer aria-hidden="true" className="h-3.5 w-3.5" />
+                  Speedruns
+                </p>
+                <h2 className="text-lg font-bold">Timed leaderboards</h2>
+              </div>
+              <span className="text-xs text-[var(--sr-text-muted)]">
+                {mainSpeedruns.length} {mainSpeedruns.length === 1 ? 'competition' : 'competitions'}
+              </span>
             </div>
-            <span className="text-xs text-[var(--sr-text-muted)]">
-              {mainSpeedruns.length} {mainSpeedruns.length === 1 ? 'competition' : 'competitions'}
-            </span>
-          </div>
+          )}
 
           <div className="flex gap-1 overflow-x-auto border-b border-[var(--sr-border)]" role="group" aria-label="Speedrun category">
             {mainSpeedruns.map((category) => {

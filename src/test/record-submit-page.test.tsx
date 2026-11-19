@@ -69,7 +69,7 @@ function category(overrides: Record<string, unknown>) {
 describe('Submit page competition types', () => {
   beforeEach(() => {
     auth.state.session = { user: { id: 'runner-id' } };
-    auth.state.profile = { id: 'runner-id', role: 'member' };
+    auth.state.profile = { id: 'runner-id', role: 'owner' };
     auth.state.loading = false;
     client.games = [{ id: 'game-id', slug: 'test-game', title: 'Test game' }];
     client.categories = [];
@@ -127,5 +127,20 @@ describe('Submit page competition types', () => {
 
     await waitFor(() => expect(screen.getByRole('button', { name: /Any%/ })).toBeInTheDocument());
     expect(screen.getByRole('button', { name: /Most Kills/ })).toBeInTheDocument();
+  });
+
+  it('hides record competitions from non-owners until the update is published', async () => {
+    auth.state.profile = { id: 'runner-id', role: 'member' };
+    client.categories = [
+      category({ id: 'speed-1', name: 'Any%', competition_type: 'speedrun', record_unit: null }),
+      category({ id: 'record-1', name: 'Most Kills', record_unit: 'Kills' }),
+    ];
+
+    render(<SubmitRunPage onRequireAuth={vi.fn()} />);
+    fireEvent.change(await screen.findByLabelText('Game'), { target: { value: 'game-id' } });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Any%/ })).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /Most Kills/ })).toBeNull();
+    expect(screen.queryByLabelText('Record value')).toBeNull();
   });
 });

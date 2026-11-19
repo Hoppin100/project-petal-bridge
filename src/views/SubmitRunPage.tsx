@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import type { Game, Category } from '@/lib/types';
 import { isValidYouTubeUrl, parseYouTubeId, formatTime } from '@/lib/format';
+import { isComingSoonGame } from '@/lib/games';
+import { useOwnerPreview } from '@/lib/preview';
 import { linkHref } from '@/lib/router';
 import {
   fetchGameCompetitions,
@@ -53,6 +55,7 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
   const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [gamesLoaded, setGamesLoaded] = useState(false);
+  const ownerPreview = useOwnerPreview();
 
   // Only ask people to sign in once the stored session has actually been
   // read: on a hard page load the session is still null for a moment, and
@@ -95,13 +98,16 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
         setLoadError('Categories could not be loaded. Choose the game again.');
         return;
       }
-      setCompetitions(categories);
-      const requested = categories.find((category) => category.id === requestedCompetitionId);
+      const visible = ownerPreview
+        ? categories
+        : categories.filter((category) => !isRecordCategory(category));
+      setCompetitions(visible);
+      const requested = visible.find((category) => category.id === requestedCompetitionId);
       if (requested) {
         setCompetitionId(requested.id);
         return;
       }
-      const speedruns = categories.filter((category) => !isRecordCategory(category));
+      const speedruns = visible.filter((category) => !isRecordCategory(category));
       const firstMain = speedruns.find((category) => !category.parent_category_id);
       const firstMainHasSubcategories = firstMain
         ? speedruns.some((category) => category.parent_category_id === firstMain.id)
@@ -111,22 +117,26 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
       } else if (firstMain) {
         setExpandedCategoryId(firstMain.id);
       } else {
-        const firstRecord = categories.find((category) => isRecordCategory(category));
+        const firstRecord = visible.find((category) => isRecordCategory(category));
         if (firstRecord) setCompetitionId(firstRecord.id);
       }
     })();
     return () => { current = false; };
-  }, [gameId, requestedCompetitionId]);
+  }, [gameId, requestedCompetitionId, ownerPreview]);
 
   const videoValid = isValidYouTubeUrl(videoUrl);
   const videoId = parseYouTubeId(videoUrl);
   const startSeconds = parseVideoTimestamp(videoStart);
   const endSeconds = parseVideoTimestamp(videoEnd);
   const speedrunCategories = competitions.filter((category) => !isRecordCategory(category));
-  const recordCategories = competitions.filter((category) => isRecordCategory(category));
+  const recordCategories = ownerPreview
+    ? competitions.filter((category) => isRecordCategory(category))
+    : [];
   const mainSpeedrunCategories = speedrunCategories.filter((category) => !category.parent_category_id);
   const selectedCompetition = competitions.find((category) => category.id === competitionId);
-  const submittingRecord = isRecordCategory(selectedCompetition);
+  const selectedGame = games.find((game) => game.id === gameId);
+  const selectedGameComingSoon = !ownerPreview && selectedGame ? isComingSoonGame(selectedGame) : false;
+  const submittingRecord = ownerPreview && isRecordCategory(selectedCompetition);
 
   const timeMs = (() => {
     const h = parseInt(hours || '0', 10) || 0;
@@ -149,6 +159,10 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
     if (!gameId) {
       setValidationField('game');
       setError('Please select a game.');
+      return;
+    }
+    if (selectedGameComingSoon) {
+      setError(`Cannot submit a run yet — ${selectedGame?.title} hasn’t been released.`);
       return;
     }
     if (!competitionId || !selectedCompetition) {
@@ -337,6 +351,11 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
             ))}
           </select>
           {validationField === 'game' && error && <p role="alert" className="mt-1 text-xs text-[var(--sr-danger)]">{error}</p>}
+          {selectedGameComingSoon && (
+            <p role="status" className="mt-2 text-sm text-[var(--sr-warn)]">
+              Cannot submit a run yet — {selectedGame?.title} hasn’t been released.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -664,7 +683,7 @@ export function SubmitRunPage({ onRequireAuth }: SubmitRunPageProps) {
           </div>
         )}
 
-        <button type="submit" disabled={submitting} className="sr-btn-primary">
+        <button type="submit" disabled={submitting || selectedGameComingSoon} className="sr-btn-primary">
           {submitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
