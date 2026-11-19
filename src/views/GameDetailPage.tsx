@@ -8,7 +8,6 @@ import { RecordLeaderboard } from '@/components/RecordLeaderboard';
 import { linkHref } from '@/lib/router';
 import { formatTime } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
-import { isComingSoonGame } from '@/lib/games';
 import { isSlowerIsBetterGame } from '@/lib/game-rules';
 import {
   RECORD_SUBMISSION_COLUMNS,
@@ -270,7 +269,6 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   );
   const recordMainCategories = recordCategories.filter((category) => !category.parent_category_id);
   const worldRecord = runs[0];
-  const comingSoon = isComingSoonGame(game);
 
   return (
     <div className="sr-container pb-12">
@@ -302,31 +300,15 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
               <h1 className="text-2xl font-bold sm:text-4xl">
                 {game.title}
               </h1>
-              {comingSoon && (
-                <p className="mt-2 inline-flex rounded-sm bg-[var(--sr-warn)] px-2 py-1 text-xs font-bold uppercase tracking-wide text-black">
-                  Coming soon
-                </p>
-              )}
               {game.blurb && (
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--sr-text-dim)]">
                   {game.blurb}
                 </p>
               )}
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-                {comingSoon ? (
-                  <div>
-                    <button type="button" disabled className="sr-btn-primary cursor-not-allowed opacity-60">
-                      Submit a run
-                    </button>
-                    <p role="status" className="mt-2 text-sm text-[var(--sr-warn)]">
-                      Cannot submit a run yet — {game.title} hasn’t been released.
-                    </p>
-                  </div>
-                ) : (
-                  <a href={linkHref(`/submit?game=${game.id}`)} className="sr-btn-primary">
-                    Submit a run
-                  </a>
-                )}
+                <a href={linkHref(`/submit?game=${game.id}`)} className="sr-btn-primary">
+                  Submit a run
+                </a>
                 {game.page_url && (
                   <a
                     href={game.page_url}
@@ -525,14 +507,12 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
                       </div>
                     </div>
                   )}
-                  {!comingSoon && (
-                    <a
-                      href={linkHref(`/submit?game=${game.id}&competition=${activeRecord.id}`)}
-                      className="sr-btn-ghost self-start"
-                    >
-                      Submit this record
-                    </a>
-                  )}
+                  <a
+                    href={linkHref(`/submit?game=${game.id}&competition=${activeRecord.id}`)}
+                    className="sr-btn-ghost self-start"
+                  >
+                    Submit this record
+                  </a>
                 </div>
               )}
 
