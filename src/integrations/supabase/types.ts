@@ -200,6 +200,238 @@ export type Database = {
           },
         ]
       }
+      forum_posts: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          parent_post_id: string | null
+          score: number
+          thread_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string
+          body: string
+          created_at?: string
+          id?: string
+          parent_post_id?: string | null
+          score?: number
+          thread_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          parent_post_id?: string | null
+          score?: number
+          thread_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_posts_parent_post_id_fkey"
+            columns: ["parent_post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_posts_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "forum_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_reports: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string | null
+          reason: string
+          reporter_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          thread_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          reason: string
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          thread_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          reason?: string
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          thread_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_reports_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_reports_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "forum_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_threads: {
+        Row: {
+          accepted_post_id: string | null
+          author_id: string
+          body: string
+          category: string
+          created_at: string
+          game_id: string
+          id: string
+          is_locked: boolean
+          is_pinned: boolean
+          is_solved: boolean
+          score: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_post_id?: string | null
+          author_id?: string
+          body?: string
+          category?: string
+          created_at?: string
+          game_id: string
+          id?: string
+          is_locked?: boolean
+          is_pinned?: boolean
+          is_solved?: boolean
+          score?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_post_id?: string | null
+          author_id?: string
+          body?: string
+          category?: string
+          created_at?: string
+          game_id?: string
+          id?: string
+          is_locked?: boolean
+          is_pinned?: boolean
+          is_solved?: boolean
+          score?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_threads_accepted_post_fkey"
+            columns: ["accepted_post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_threads_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_threads_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_votes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string | null
+          thread_id: string | null
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          thread_id?: string | null
+          user_id?: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          thread_id?: string | null
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_votes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_votes_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "forum_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_requests: {
         Row: {
           created_at: string
@@ -328,6 +560,140 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      guide_sections: {
+        Row: {
+          body: string
+          created_at: string
+          guide_id: string
+          heading: string | null
+          id: string
+          image_url: string | null
+          sort_order: number
+          video_url: string | null
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          guide_id: string
+          heading?: string | null
+          id?: string
+          image_url?: string | null
+          sort_order?: number
+          video_url?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          guide_id?: string
+          heading?: string | null
+          id?: string
+          image_url?: string | null
+          sort_order?: number
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_sections_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_votes: {
+        Row: {
+          created_at: string
+          guide_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          guide_id: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          guide_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_votes_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guides: {
+        Row: {
+          author_id: string
+          category: string
+          cover_image_url: string | null
+          created_at: string
+          game_id: string
+          helpful_count: number
+          id: string
+          published_at: string | null
+          status: string
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string
+          category?: string
+          cover_image_url?: string | null
+          created_at?: string
+          game_id: string
+          helpful_count?: number
+          id?: string
+          published_at?: string | null
+          status?: string
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          category?: string
+          cover_image_url?: string | null
+          created_at?: string
+          game_id?: string
+          helpful_count?: number
+          id?: string
+          published_at?: string | null
+          status?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guides_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guides_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -691,6 +1057,14 @@ export type Database = {
         Returns: undefined
       }
       verify_run: { Args: { p_run: string }; Returns: undefined }
+      vote_forum_post: {
+        Args: { p_post: string; p_value: number }
+        Returns: undefined
+      }
+      vote_forum_thread: {
+        Args: { p_thread: string; p_value: number }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "owner" | "member" | "moderator"

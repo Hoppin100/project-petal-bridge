@@ -179,7 +179,7 @@ describe('Manage game subcategories', () => {
     render(<ManageGamesPage />);
     fireEvent.click(await screen.findByRole('button', { name: 'Categories' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add category' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add record' }));
     fireEvent.click(screen.getByRole('radio', { name: /^Record/ }));
 
     const dialog = within(screen.getByRole('dialog'));
@@ -224,11 +224,41 @@ describe('Manage game subcategories', () => {
     });
   });
 
+  it('allows the same name in the other competition type', async () => {
+    database.categories.push({
+      id: 'record-any',
+      game_id: 'game-id',
+      parent_category_id: null,
+      name: 'Any%',
+      timing_rules: null,
+      sort_order: 30,
+      competition_type: 'record',
+      record_unit: 'Points',
+      record_higher_is_better: true,
+    });
+
+    render(<ManageGamesPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Categories' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add speedrun' }));
+    fireEvent.change(screen.getByLabelText(/^Category name/), { target: { value: 'Any%' } });
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Add category' }));
+
+    await waitFor(() => {
+      expect(database.categories).toContainEqual(
+        expect.objectContaining({
+          game_id: 'game-id',
+          name: 'Any%',
+          competition_type: 'speedrun',
+        })
+      );
+    });
+  });
+
   it('keeps the speedrun form and default category label unchanged', async () => {
     render(<ManageGamesPage />);
     fireEvent.click(await screen.findByRole('button', { name: 'Categories' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add category' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add speedrun' }));
     expect(screen.getByRole('radio', { name: /^Speedrun/ })).toBeChecked();
     expect(screen.getByLabelText(/^Category name/)).toBeRequired();
     expect(screen.getByLabelText(/^Timing rules/)).toBeInTheDocument();

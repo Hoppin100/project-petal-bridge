@@ -1,10 +1,26 @@
 import { useEffect, useState } from 'react';
-import { Trophy, ArrowLeft, ExternalLink, Info, Gamepad2, Medal, ChevronDown, ChevronRight, Timer, TrendingUp } from 'lucide-react';
+import {
+  Trophy,
+  ArrowLeft,
+  ExternalLink,
+  Info,
+  Gamepad2,
+  Medal,
+  ChevronDown,
+  ChevronRight,
+  Timer,
+  TrendingUp,
+  BookOpen,
+  MessageSquare,
+  Swords,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchGameBySlug } from '@/lib/games';
 import type { Game, Category, Run, Profile, RecordSubmission } from '@/lib/types';
 import { Leaderboard } from '@/components/Leaderboard';
 import { RecordLeaderboard } from '@/components/RecordLeaderboard';
+import { GameGuides } from '@/components/GameGuides';
+import { GameForums } from '@/components/GameForums';
 import { linkHref } from '@/lib/router';
 import { formatTime } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
@@ -17,6 +33,13 @@ import {
   isRecordCategory,
   recordDirectionLabel,
 } from '@/lib/competitions';
+import {
+  categoriesForType,
+  gameTabs,
+  resolveGameTab,
+  supportedCompetitionTypes,
+  type GameTab,
+} from '@/lib/game-tabs';
 
 interface GameDetailPageProps {
   slug: string;
@@ -32,6 +55,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   const [activeSpeedrunId, setActiveSpeedrunId] = useState<string | null>(null);
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<GameTab>('overview');
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [underConstruction, setUnderConstruction] = useState(false);
@@ -106,6 +130,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
       setActiveSpeedrunId(firstSpeedrun?.id ?? null);
       setActiveRecordId(firstRecord?.id ?? null);
       setExpandedCategoryId(null);
+      setActiveTab('overview');
 
       setLoading(false);
     })().catch((error: unknown) => {
@@ -259,297 +284,620 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
     );
   }
 
-  const speedrunCategories = competitions.filter((category) => !isRecordCategory(category));
-  const recordCategories = ownerPreview
-    ? competitions.filter((category) => isRecordCategory(category))
-    : [];
+  const speedrunCategories = categoriesForType(competitions, 'speedrun');
+  const recordCategories = ownerPreview ? categoriesForType(competitions, 'record') : [];
   const activeSpeedrun = speedrunCategories.find((c) => c.id === activeSpeedrunId);
   const activeRecord = recordCategories.find((c) => c.id === activeRecordId);
-  const mainSpeedruns = speedrunCategories.filter((category) => !category.parent_category_id);
-  const activeMainSpeedrun = activeSpeedrun?.parent_category_id
-    ? mainSpeedruns.find((category) => category.id === activeSpeedrun.parent_category_id)
-    : activeSpeedrun;
-  const visibleSubcategories = speedrunCategories.filter(
-    (category) => category.parent_category_id === expandedCategoryId
-  );
-  const recordMainCategories = recordCategories.filter((category) => !category.parent_category_id);
   const worldRecord = runs[0];
   const comingSoon = !ownerPreview && isComingSoonGame(game);
+  const support = supportedCompetitionTypes(competitions);
+  const tabs = gameTabs(support);
+  const currentTab = resolveGameTab(activeTab, tabs);
+
+  const header = (
+    <GameHeader game={game} comingSoon={comingSoon} worldRecord={worldRecord} />
+  );
+
+  // Published experience: keep the existing game page for visitors until the
+  // owner publishes the tabbed layout.
+  if (!ownerPreview) {
+    return (
+      <div className="sr-container pb-12">
+        {header}
+        {competitions.length === 0 && <NoCategories />}
+        {speedrunCategories.length > 0 && (
+          <SpeedrunPanel
+            categories={speedrunCategories}
+            activeId={activeSpeedrunId}
+            onSelect={setActiveSpeedrunId}
+            expandedCategoryId={expandedCategoryId}
+            onExpand={setExpandedCategoryId}
+            runs={runs}
+            runnerMap={runnerMap}
+            slowerIsBetter={slowerIsBetter}
+            showHeading={false}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="sr-container pb-12">
-      <section className="border-b border-[var(--sr-border)] py-6">
-        <div className="mb-6 flex items-center justify-between">
-          <a
-            href={linkHref('/games')}
-            className="inline-flex items-center gap-1 text-sm text-[var(--sr-text-muted)] hover:text-[var(--sr-text)]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            All games
-          </a>
+      {header}
 
-          <span className="sr-mono text-xs text-[var(--sr-text-muted)]">{game.source || 'Game leaderboard'}</span>
+      <nav
+        className="mt-6 flex gap-1 overflow-x-auto border-b border-[var(--sr-border)]"
+        aria-label="Game sections"
+        role="tablist"
+      >
+        {tabs.map((tab) => {
+          const selected = currentTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              aria-controls="game-tab-panel"
+              onClick={() => setActiveTab(tab.id)}
+              className={`inline-flex flex-shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
+                selected
+                  ? 'border-[var(--sr-primary)] text-[var(--sr-text)]'
+                  : 'border-transparent text-[var(--sr-text-muted)] hover:text-[var(--sr-text)]'
+              }`}
+            >
+              {tab.id === 'speedruns' && <Timer aria-hidden="true" className="h-4 w-4" />}
+              {tab.id === 'records' && <TrendingUp aria-hidden="true" className="h-4 w-4" />}
+              {tab.id === 'guides' && <BookOpen aria-hidden="true" className="h-4 w-4" />}
+              {tab.id === 'forums' && <MessageSquare aria-hidden="true" className="h-4 w-4" />}
+              {tab.label}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div
+        id="game-tab-panel"
+        role="tabpanel"
+        aria-label={`${tabs.find((tab) => tab.id === currentTab)?.label ?? 'Game'} section`}
+        className="pt-5"
+      >
+        {currentTab === 'overview' && (
+          <GameOverview
+            game={game}
+            categories={competitions}
+            support={support}
+            worldRecord={worldRecord}
+            onOpenTab={setActiveTab}
+          />
+        )}
+
+        {currentTab === 'speedruns' && (
+          <>
+            {speedrunCategories.length === 0 ? (
+              <NoCategories />
+            ) : (
+              <SpeedrunPanel
+                categories={speedrunCategories}
+                activeId={activeSpeedrunId}
+                onSelect={setActiveSpeedrunId}
+                expandedCategoryId={expandedCategoryId}
+                onExpand={setExpandedCategoryId}
+                runs={runs}
+                runnerMap={runnerMap}
+                slowerIsBetter={slowerIsBetter}
+                showHeading
+              />
+            )}
+          </>
+        )}
+
+        {currentTab === 'records' && (
+          <RecordPanel
+            game={game}
+            categories={recordCategories}
+            activeId={activeRecordId}
+            activeRecord={activeRecord}
+            onSelect={setActiveRecordId}
+            submissions={recordSubmissions}
+            runnerMap={runnerMap}
+            recordsUnavailable={recordsUnavailable}
+          />
+        )}
+
+        {currentTab === 'guides' && <GameGuides game={game} />}
+        {currentTab === 'forums' && <GameForums game={game} />}
+      </div>
+    </div>
+  );
+}
+
+function GameHeader({
+  game,
+  comingSoon,
+  worldRecord,
+}: {
+  game: Game;
+  comingSoon: boolean;
+  worldRecord: Run | undefined;
+}) {
+  return (
+    <section className="border-b border-[var(--sr-border)] py-6">
+      <div className="mb-6 flex items-center justify-between">
+        <a
+          href={linkHref('/games')}
+          className="inline-flex items-center gap-1 text-sm text-[var(--sr-text-muted)] hover:text-[var(--sr-text)]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          All games
+        </a>
+
+        <span className="sr-mono text-xs text-[var(--sr-text-muted)]">{game.source || 'Game leaderboard'}</span>
+      </div>
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+        <div className="flex h-36 w-full flex-shrink-0 items-center justify-center overflow-hidden rounded-sm border border-[var(--sr-border)] bg-[var(--sr-surface-2)] text-[var(--sr-text-muted)] sm:h-40 sm:w-56">
+          {game.cover_url ? (
+            <img
+              src={game.cover_url}
+              alt={game.title}
+              className="h-full w-full object-cover"
+              onError={(event) => event.currentTarget.remove()}
+            />
+          ) : <Gamepad2 className="h-7 w-7" />}
         </div>
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-            <div className="flex h-36 w-full flex-shrink-0 items-center justify-center overflow-hidden rounded-sm border border-[var(--sr-border)] bg-[var(--sr-surface-2)] text-[var(--sr-text-muted)] sm:h-40 sm:w-56">
-              {game.cover_url ? (
-                <img
-                  src={game.cover_url}
-                  alt={game.title}
-                  className="h-full w-full object-cover"
-                  onError={(event) => event.currentTarget.remove()}
-                />
-              ) : <Gamepad2 className="h-7 w-7" />}
-            </div>
-            <div className="min-w-0 flex-1">
-              {game.is_featured && <p className="sr-eyebrow">Featured leaderboard</p>}
-              <h1 className="text-2xl font-bold sm:text-4xl">
-                {game.title}
-              </h1>
-              {comingSoon && (
-                <p className="mt-2 inline-flex rounded-sm bg-[var(--sr-warn)] px-2 py-1 text-xs font-bold uppercase tracking-wide text-black">
-                  Coming soon
+        <div className="min-w-0 flex-1">
+          {game.is_featured && <p className="sr-eyebrow">Featured leaderboard</p>}
+          <h1 className="text-2xl font-bold sm:text-4xl">{game.title}</h1>
+          {comingSoon && (
+            <p className="mt-2 inline-flex rounded-sm bg-[var(--sr-warn)] px-2 py-1 text-xs font-bold uppercase tracking-wide text-black">
+              Coming soon
+            </p>
+          )}
+          {game.blurb && (
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--sr-text-dim)]">
+              {game.blurb}
+            </p>
+          )}
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+            {comingSoon ? (
+              <div>
+                <button type="button" disabled className="sr-btn-primary cursor-not-allowed opacity-60">
+                  Submit a run
+                </button>
+                <p role="status" className="mt-2 text-sm text-[var(--sr-warn)]">
+                  Cannot submit a run yet — {game.title} hasn’t been released.
                 </p>
-              )}
-              {game.blurb && (
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--sr-text-dim)]">
-                  {game.blurb}
-                </p>
-              )}
-              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-                {comingSoon ? (
-                  <div>
-                    <button type="button" disabled className="sr-btn-primary cursor-not-allowed opacity-60">
-                      Submit a run
-                    </button>
-                    <p role="status" className="mt-2 text-sm text-[var(--sr-warn)]">
-                      Cannot submit a run yet — {game.title} hasn’t been released.
-                    </p>
-                  </div>
-                ) : (
-                  <a href={linkHref(`/submit?game=${game.id}`)} className="sr-btn-primary">
-                    Submit a run
-                  </a>
-                )}
-                {game.page_url && (
-                  <a
-                    href={game.page_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="sr-btn-ghost"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Game page
-                  </a>
-                )}
-                {worldRecord && (
-                  <div className="flex items-center gap-2 border-l-2 border-[var(--sr-primary)] pl-3">
-                    <span className="text-xs text-[var(--sr-text-muted)]">Record</span>
-                    <span className="sr-mono text-lg font-semibold text-[var(--sr-text)]">
-                      {formatTime(worldRecord.time_ms)}
-                    </span>
-                  </div>
-                )}
               </div>
-            </div>
+            ) : (
+              <a href={linkHref(`/submit?game=${game.id}`)} className="sr-btn-primary">
+                Submit a run
+              </a>
+            )}
+            {game.page_url && (
+              <a
+                href={game.page_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="sr-btn-ghost"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Game page
+              </a>
+            )}
+            {worldRecord && (
+              <div className="flex items-center gap-2 border-l-2 border-[var(--sr-primary)] pl-3">
+                <span className="text-xs text-[var(--sr-text-muted)]">Record</span>
+                <span className="sr-mono text-lg font-semibold text-[var(--sr-text)]">
+                  {formatTime(worldRecord.time_ms)}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function NoCategories() {
+  return (
+    <section className="sr-panel mt-6 p-4 sm:p-5">
+      <div className="py-8 text-center">
+        <Medal className="mx-auto h-8 w-8 text-[var(--sr-text-muted)]" />
+        <p className="mt-3 font-semibold text-[var(--sr-text)]">No categories yet</p>
+        <p className="mt-1 text-sm text-[var(--sr-text-muted)]">Leaderboards will appear here when categories are added.</p>
+      </div>
+    </section>
+  );
+}
+
+function GameOverview({
+  game,
+  categories,
+  support,
+  worldRecord,
+  onOpenTab,
+}: {
+  game: Game;
+  categories: Category[];
+  support: { speedruns: boolean; records: boolean };
+  worldRecord: Run | undefined;
+  onOpenTab: (tab: GameTab) => void;
+}) {
+  const speedruns = categoriesForType(categories, 'speedrun');
+  const records = categoriesForType(categories, 'record');
+  const mainSpeedruns = speedruns.filter((category) => !category.parent_category_id);
+  const mainRecords = records.filter((category) => !category.parent_category_id);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <section className="sr-panel p-4 sm:p-5">
+        <p className="sr-eyebrow flex items-center gap-2">
+          <Swords aria-hidden="true" className="h-3.5 w-3.5" />
+          Overview
+        </p>
+        <h2 className="text-lg font-bold">{game.title}</h2>
+        {game.blurb ? (
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--sr-text-dim)]">{game.blurb}</p>
+        ) : (
+          <p className="mt-2 text-sm text-[var(--sr-text-muted)]">
+            No description has been added for this game yet.
+          </p>
+        )}
+        <dl className="mt-4 grid gap-3 border-t border-[var(--sr-border)] pt-4 sm:grid-cols-3">
+          <div>
+            <dt className="sr-stat-label">Platform</dt>
+            <dd className="mt-0.5 text-sm font-semibold">{game.source || '—'}</dd>
+          </div>
+          <div>
+            <dt className="sr-stat-label">Speedrun boards</dt>
+            <dd className="sr-mono mt-0.5 text-sm font-semibold">
+              {support.speedruns ? speedruns.length : 'Not offered'}
+            </dd>
+          </div>
+          <div>
+            <dt className="sr-stat-label">Record boards</dt>
+            <dd className="sr-mono mt-0.5 text-sm font-semibold">
+              {support.records ? records.length : 'Not offered'}
+            </dd>
+          </div>
+        </dl>
+        {worldRecord && (
+          <p className="mt-3 border-l-2 border-[var(--sr-primary)] pl-3 text-sm text-[var(--sr-text-muted)]">
+            Fastest verified time right now:{' '}
+            <span className="sr-mono font-semibold text-[var(--sr-text)]">
+              {formatTime(worldRecord.time_ms)}
+            </span>
+          </p>
+        )}
       </section>
 
-      {competitions.length === 0 && (
-        <section className="sr-panel p-4 sm:p-5">
-          <div className="py-8 text-center">
-            <Medal className="mx-auto h-8 w-8 text-[var(--sr-text-muted)]" />
-            <p className="mt-3 font-semibold text-[var(--sr-text)]">No categories yet</p>
-            <p className="mt-1 text-sm text-[var(--sr-text-muted)]">Leaderboards will appear here when categories are added.</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {support.speedruns && (
+          <OverviewCard
+            icon={<Timer className="h-5 w-5" />}
+            eyebrow="Competition"
+            title="Speedruns"
+            description={`${speedruns.length} timed ${speedruns.length === 1 ? 'board' : 'boards'} with video proof and verification.`}
+            items={mainSpeedruns.slice(0, 4).map((category) => category.name)}
+            actionLabel="View speedruns"
+            onAction={() => onOpenTab('speedruns')}
+          />
+        )}
+        {support.records && (
+          <OverviewCard
+            icon={<TrendingUp className="h-5 w-5" />}
+            eyebrow="Competition"
+            title="Records"
+            description={`${records.length} numeric ${records.length === 1 ? 'board' : 'boards'} ranked by the best value.`}
+            items={mainRecords.slice(0, 4).map((category) => category.name)}
+            actionLabel="View records"
+            onAction={() => onOpenTab('records')}
+          />
+        )}
+        <OverviewCard
+          icon={<BookOpen className="h-5 w-5" />}
+          eyebrow="Community"
+          title="Guides"
+          description="Walkthroughs, advanced strategies, and glitch explanations written by players."
+          actionLabel="Browse guides"
+          onAction={() => onOpenTab('guides')}
+        />
+        <OverviewCard
+          icon={<MessageSquare className="h-5 w-5" />}
+          eyebrow="Community"
+          title="Forums"
+          description="Ask for help, share strategies, and talk through routes with other runners."
+          actionLabel="Open forums"
+          onAction={() => onOpenTab('forums')}
+        />
+      </div>
+    </div>
+  );
+}
+
+function OverviewCard({
+  icon,
+  eyebrow,
+  title,
+  description,
+  items,
+  actionLabel,
+  onAction,
+}: {
+  icon: React.ReactNode;
+  eyebrow: string;
+  title: string;
+  description: string;
+  items?: string[];
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <section className="sr-card flex flex-col p-4">
+      <div className="flex items-center gap-2 text-[var(--sr-primary)]">
+        {icon}
+        <p className="sr-eyebrow mb-0">{eyebrow}</p>
+      </div>
+      <h3 className="mt-1 text-base font-bold">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-[var(--sr-text-muted)]">{description}</p>
+      {items && items.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-1.5">
+          {items.map((item) => (
+            <li
+              key={item}
+              className="rounded-sm border border-[var(--sr-border)] px-2 py-0.5 text-xs text-[var(--sr-text-dim)]"
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+      )}
+      <button type="button" onClick={onAction} className="sr-btn-ghost mt-4 self-start">
+        {actionLabel}
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </section>
+  );
+}
+
+function SpeedrunPanel({
+  categories,
+  activeId,
+  onSelect,
+  expandedCategoryId,
+  onExpand,
+  runs,
+  runnerMap,
+  slowerIsBetter,
+  showHeading,
+}: {
+  categories: Category[];
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  expandedCategoryId: string | null;
+  onExpand: (id: string | null) => void;
+  runs: Run[];
+  runnerMap: Record<string, Profile>;
+  slowerIsBetter: boolean;
+  showHeading: boolean;
+}) {
+  const active = categories.find((category) => category.id === activeId);
+  const mainCategories = categories.filter((category) => !category.parent_category_id);
+  const visibleSubcategories = categories.filter(
+    (category) => category.parent_category_id === expandedCategoryId
+  );
+
+  return (
+    <section className="sr-panel mt-6 p-4 sm:p-5" aria-label="Speedrun leaderboards">
+      {showHeading && (
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <p className="sr-eyebrow flex items-center gap-2">
+              <Timer aria-hidden="true" className="h-3.5 w-3.5" />
+              Speedruns
+            </p>
+            <h2 className="text-lg font-bold">Timed leaderboards</h2>
           </div>
-        </section>
+          <span className="text-xs text-[var(--sr-text-muted)]">
+            {mainCategories.length} {mainCategories.length === 1 ? 'competition' : 'competitions'}
+          </span>
+        </div>
       )}
 
-      {speedrunCategories.length > 0 && (
-        <section className="sr-panel mt-6 p-4 sm:p-5" aria-label="Speedrun leaderboards">
-          {ownerPreview && (
-            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-              <div>
-                <p className="sr-eyebrow flex items-center gap-2">
-                  <Timer aria-hidden="true" className="h-3.5 w-3.5" />
-                  Speedruns
-                </p>
-                <h2 className="text-lg font-bold">Timed leaderboards</h2>
-              </div>
-              <span className="text-xs text-[var(--sr-text-muted)]">
-                {mainSpeedruns.length} {mainSpeedruns.length === 1 ? 'competition' : 'competitions'}
-              </span>
-            </div>
-          )}
+      <div className="flex gap-1 overflow-x-auto border-b border-[var(--sr-border)]" role="group" aria-label="Speedrun category">
+        {mainCategories.map((category) => {
+          const hasSubcategories = categories.some((item) => item.parent_category_id === category.id);
+          const isActive = active?.parent_category_id
+            ? active.parent_category_id === category.id
+            : active?.id === category.id;
+          const isExpanded = expandedCategoryId === category.id;
+          return (
+            <button
+              key={category.id}
+              aria-pressed={isActive}
+              onClick={() => {
+                onSelect(category.id);
+                onExpand(
+                  hasSubcategories ? (isExpanded ? null : category.id) : null
+                );
+              }}
+              className={`inline-flex flex-shrink-0 items-center gap-1 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
+                isActive
+                  ? 'border-[var(--sr-primary)] text-[var(--sr-text)]'
+                  : 'border-transparent text-[var(--sr-text-muted)] hover:text-[var(--sr-text)]'
+              }`}
+            >
+              {category.name}
+              {hasSubcategories && (isExpanded
+                ? <ChevronDown aria-hidden="true" className="h-4 w-4" />
+                : <ChevronRight aria-hidden="true" className="h-4 w-4" />)}
+            </button>
+          );
+        })}
+      </div>
 
-          <div className="flex gap-1 overflow-x-auto border-b border-[var(--sr-border)]" role="group" aria-label="Speedrun category">
-            {mainSpeedruns.map((category) => {
-              const hasSubcategories = speedrunCategories.some((item) => item.parent_category_id === category.id);
-              const isActive = activeMainSpeedrun?.id === category.id;
-              const isExpanded = expandedCategoryId === category.id;
+      {expandedCategoryId && visibleSubcategories.length > 0 && (
+        <div
+          id={`subcategories-${expandedCategoryId}`}
+          className="mb-5 border-b border-[var(--sr-border)] bg-[var(--sr-surface)] px-3 py-3"
+          aria-label={`Subcategories of ${mainCategories.find((category) => category.id === expandedCategoryId)?.name ?? 'category'}`}
+        >
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--sr-text-muted)]">
+            Subcategories
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {visibleSubcategories.map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                aria-pressed={activeId === category.id}
+                onClick={() => onSelect(category.id)}
+                className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                  activeId === category.id
+                    ? 'border-[var(--sr-primary)] bg-[var(--sr-primary)]/10 text-[var(--sr-text)]'
+                    : 'border-[var(--sr-border)] text-[var(--sr-text-muted)] hover:border-[var(--sr-border-hover)] hover:text-[var(--sr-text)]'
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {active?.timing_rules && (
+        <div className="mb-5 flex items-start gap-2 border-l-2 border-[var(--sr-border-hover)] bg-[var(--sr-surface)] px-3 py-2.5 text-sm text-[var(--sr-text-dim)]">
+          <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--sr-primary)]" />
+          <div>
+            <span className="font-semibold text-[var(--sr-text)]">Timing rules:</span>{' '}
+            {active.timing_rules}
+          </div>
+        </div>
+      )}
+
+      <div className="mb-3 mt-5 flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="text-base font-bold">Leaderboard</h3>
+        {active && <p className="text-sm text-[var(--sr-text-muted)]">{active.name}</p>}
+      </div>
+      <Leaderboard runs={runs} runnerMap={runnerMap} slowerIsBetter={slowerIsBetter} />
+    </section>
+  );
+}
+
+function RecordPanel({
+  game,
+  categories,
+  activeId,
+  activeRecord,
+  onSelect,
+  submissions,
+  runnerMap,
+  recordsUnavailable,
+}: {
+  game: Game;
+  categories: Category[];
+  activeId: string | null;
+  activeRecord: Category | undefined;
+  onSelect: (id: string) => void;
+  submissions: RecordSubmission[];
+  runnerMap: Record<string, Profile>;
+  recordsUnavailable: boolean;
+}) {
+  if (categories.length === 0) {
+    return <NoCategories />;
+  }
+
+  const mainCategories = categories.filter((category) => !category.parent_category_id);
+
+  return (
+    <section className="sr-panel p-4 sm:p-5" aria-label="Record leaderboards">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <p className="sr-eyebrow flex items-center gap-2">
+            <TrendingUp aria-hidden="true" className="h-3.5 w-3.5" />
+            Records
+          </p>
+          <h2 className="text-lg font-bold">Numeric record boards</h2>
+        </div>
+        <span className="text-xs text-[var(--sr-text-muted)]">
+          {mainCategories.length} {mainCategories.length === 1 ? 'competition' : 'competitions'}
+        </span>
+      </div>
+
+      {recordsUnavailable ? (
+        <p role="status" className="border-l-2 border-[var(--sr-warn)] px-3 py-2 text-sm text-[var(--sr-text-muted)]">
+          Record boards are not available yet. Apply
+          {' '}drizzle/migrations/0009_competition_types.sql
+          {' '}to the project database to enable them.
+        </p>
+      ) : (
+        <>
+          <div className="flex gap-1 overflow-x-auto border-b border-[var(--sr-border)]" role="group" aria-label="Record competition">
+            {categories.map((category) => {
+              const isActive = activeId === category.id;
+              const isSub = Boolean(category.parent_category_id);
               return (
                 <button
                   key={category.id}
                   aria-pressed={isActive}
-                  onClick={() => {
-                    setActiveSpeedrunId(category.id);
-                    setExpandedCategoryId((current) =>
-                      hasSubcategories ? (current === category.id ? null : category.id) : null
-                    );
-                  }}
+                  onClick={() => onSelect(category.id)}
                   className={`inline-flex flex-shrink-0 items-center gap-1 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
                     isActive
                       ? 'border-[var(--sr-primary)] text-[var(--sr-text)]'
                       : 'border-transparent text-[var(--sr-text-muted)] hover:text-[var(--sr-text)]'
-                  }`}
+                  } ${isSub ? 'pl-4 text-[13px] font-medium' : ''}`}
                 >
+                  {isSub && <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />}
                   {category.name}
-                  {hasSubcategories && (isExpanded
-                    ? <ChevronDown aria-hidden="true" className="h-4 w-4" />
-                    : <ChevronRight aria-hidden="true" className="h-4 w-4" />)}
                 </button>
               );
             })}
           </div>
 
-          {expandedCategoryId && visibleSubcategories.length > 0 && (
-            <div
-              id={`subcategories-${expandedCategoryId}`}
-              className="mb-5 border-b border-[var(--sr-border)] bg-[var(--sr-surface)] px-3 py-3"
-              aria-label={`Subcategories of ${mainSpeedruns.find((category) => category.id === expandedCategoryId)?.name ?? 'category'}`}
-            >
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--sr-text-muted)]">
-                Subcategories
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {visibleSubcategories.map((category) => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    aria-pressed={activeSpeedrunId === category.id}
-                    onClick={() => setActiveSpeedrunId(category.id)}
-                    className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
-                      activeSpeedrunId === category.id
-                        ? 'border-[var(--sr-primary)] bg-[var(--sr-primary)]/10 text-[var(--sr-text)]'
-                        : 'border-[var(--sr-border)] text-[var(--sr-text-muted)] hover:border-[var(--sr-border-hover)] hover:text-[var(--sr-text)]'
-                    }`}
-                  >
-                    {category.name}
-                  </button>
-                ))}
+          {activeRecord && (
+            <div className="mb-5 mt-4 flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h3 className="text-base font-bold">{activeRecord.name}</h3>
+                <span className="sr-badge bg-[var(--sr-surface-2)] text-[var(--sr-text-dim)]">
+                  {activeRecord.record_unit ?? 'Value'}
+                </span>
+                <span className="text-xs text-[var(--sr-text-muted)]">
+                  {recordDirectionLabel(activeRecord.record_higher_is_better)}
+                </span>
               </div>
-            </div>
-          )}
-
-          {activeSpeedrun?.timing_rules && (
-            <div className="mb-5 flex items-start gap-2 border-l-2 border-[var(--sr-border-hover)] bg-[var(--sr-surface)] px-3 py-2.5 text-sm text-[var(--sr-text-dim)]">
-              <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--sr-primary)]" />
-              <div>
-                <span className="font-semibold text-[var(--sr-text)]">
-                  Timing rules:
-                </span>{' '}
-                {activeSpeedrun.timing_rules}
-              </div>
-            </div>
-          )}
-
-          <div className="mb-3 mt-5 flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="text-base font-bold">Leaderboard</h3>
-            {activeSpeedrun && <p className="text-sm text-[var(--sr-text-muted)]">{activeSpeedrun.name}</p>}
-          </div>
-          <Leaderboard runs={runs} runnerMap={runnerMap} slowerIsBetter={slowerIsBetter} />
-        </section>
-      )}
-
-      {recordCategories.length > 0 && (
-        <section className="sr-panel mt-6 p-4 sm:p-5" aria-label="Record leaderboards">
-          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-            <div>
-              <p className="sr-eyebrow flex items-center gap-2">
-                <TrendingUp aria-hidden="true" className="h-3.5 w-3.5" />
-                Records
-              </p>
-              <h2 className="text-lg font-bold">Numeric record boards</h2>
-            </div>
-            <span className="text-xs text-[var(--sr-text-muted)]">
-              {recordMainCategories.length} {recordMainCategories.length === 1 ? 'competition' : 'competitions'}
-            </span>
-          </div>
-
-          {recordsUnavailable ? (
-            <p role="status" className="border-l-2 border-[var(--sr-warn)] px-3 py-2 text-sm text-[var(--sr-text-muted)]">
-              Record boards are not available yet. Apply
-              {' '}drizzle/migrations/0009_competition_types.sql
-              {' '}to the project database to enable them.
-            </p>
-          ) : (
-            <>
-              <div className="flex gap-1 overflow-x-auto border-b border-[var(--sr-border)]" role="group" aria-label="Record competition">
-                {recordCategories.map((category) => {
-                  const isActive = activeRecordId === category.id;
-                  const isSub = Boolean(category.parent_category_id);
-                  return (
-                    <button
-                      key={category.id}
-                      aria-pressed={isActive}
-                      onClick={() => setActiveRecordId(category.id)}
-                      className={`inline-flex flex-shrink-0 items-center gap-1 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
-                        isActive
-                          ? 'border-[var(--sr-primary)] text-[var(--sr-text)]'
-                          : 'border-transparent text-[var(--sr-text-muted)] hover:text-[var(--sr-text)]'
-                      } ${isSub ? 'pl-4 text-[13px] font-medium' : ''}`}
-                    >
-                      {isSub && <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />}
-                      {category.name}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {activeRecord && (
-                <div className="mb-5 mt-4 flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <h3 className="text-base font-bold">{activeRecord.name}</h3>
-                    <span className="sr-badge bg-[var(--sr-surface-2)] text-[var(--sr-text-dim)]">
-                      {activeRecord.record_unit ?? 'Value'}
-                    </span>
-                    <span className="text-xs text-[var(--sr-text-muted)]">
-                      {recordDirectionLabel(activeRecord.record_higher_is_better)}
-                    </span>
+              {activeRecord.record_description && (
+                <p className="max-w-3xl text-sm text-[var(--sr-text-dim)]">
+                  {activeRecord.record_description}
+                </p>
+              )}
+              {activeRecord.record_rules && (
+                <div className="flex items-start gap-2 border-l-2 border-[var(--sr-border-hover)] bg-[var(--sr-surface)] px-3 py-2.5 text-sm text-[var(--sr-text-dim)]">
+                  <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--sr-primary)]" />
+                  <div>
+                    <span className="font-semibold text-[var(--sr-text)]">Rules: </span>
+                    {activeRecord.record_rules}
                   </div>
-                  {activeRecord.record_description && (
-                    <p className="max-w-3xl text-sm text-[var(--sr-text-dim)]">
-                      {activeRecord.record_description}
-                    </p>
-                  )}
-                  {activeRecord.record_rules && (
-                    <div className="flex items-start gap-2 border-l-2 border-[var(--sr-border-hover)] bg-[var(--sr-surface)] px-3 py-2.5 text-sm text-[var(--sr-text-dim)]">
-                      <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--sr-primary)]" />
-                      <div>
-                        <span className="font-semibold text-[var(--sr-text)]">Rules: </span>
-                        {activeRecord.record_rules}
-                      </div>
-                    </div>
-                  )}
-                  <a
-                    href={linkHref(`/submit?game=${game.id}&competition=${activeRecord.id}`)}
-                    className="sr-btn-ghost self-start"
-                  >
-                    Submit this record
-                  </a>
                 </div>
               )}
-
-              <RecordLeaderboard
-                submissions={recordSubmissions}
-                competition={activeRecord ?? { ...emptyRecordCompetition, id: '', game_id: game.id, name: '' }}
-                submitterMap={runnerMap}
-              />
-            </>
+              <a
+                href={linkHref(`/submit?game=${game.id}&competition=${activeRecord.id}`)}
+                className="sr-btn-ghost self-start"
+              >
+                Submit this record
+              </a>
+            </div>
           )}
-        </section>
+
+          <RecordLeaderboard
+            submissions={submissions}
+            competition={activeRecord ?? { ...emptyRecordCompetition, id: '', game_id: game.id, name: '' }}
+            submitterMap={runnerMap}
+          />
+        </>
       )}
-    </div>
+    </section>
   );
 }
 

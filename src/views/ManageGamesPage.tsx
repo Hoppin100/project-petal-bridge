@@ -78,6 +78,7 @@ export function ManageGamesPage() {
     initialName?: string;
     initialTimingRules?: string | null;
     initialRecord?: Category | null;
+    initialCompetitionType?: CompetitionType;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(null);
@@ -254,7 +255,7 @@ export function ManageGamesPage() {
     await loadCategories(gameId);
   }
 
-  function duplicateSubcategory(category: Category, gameId: string) {
+  function duplicateCategory(category: Category, gameId: string) {
     const categories = categoryMap[gameId] ?? [];
     const existingNames = new Set(categories.map((item) => item.name.toLowerCase()));
     let copyName = `${category.name} (Copy)`;
@@ -274,7 +275,7 @@ export function ManageGamesPage() {
       initialTimingRules: category.timing_rules,
       initialRecord: isRecordCategory(category) ? category : null,
     });
-    setCategoryClipboardNotice(`Choose a destination category and save to create "${copyName}".`);
+    setCategoryClipboardNotice(`Review the copy "${copyName}" and save to create it.`);
   }
 
   function copySubcategories(game: Game, parent: Category) {
@@ -645,13 +646,22 @@ export function ManageGamesPage() {
                           </p>
                         )}
                       </div>
-                      <button
-                        onClick={() => setShowCatModal({ gameId: game.id, cat: null, parentCategoryId: null })}
-                        className="sr-btn-ghost text-xs"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        Add category
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => setShowCatModal({ gameId: game.id, cat: null, parentCategoryId: null, initialCompetitionType: 'speedrun' })}
+                          className="sr-btn-ghost text-xs"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Add speedrun
+                        </button>
+                        <button
+                          onClick={() => setShowCatModal({ gameId: game.id, cat: null, parentCategoryId: null, initialCompetitionType: 'record' })}
+                          className="sr-btn-ghost text-xs"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Add record
+                        </button>
+                      </div>
                     </div>
                     {cats.length === 0 ? (
                       <p className="text-sm text-[var(--sr-text-muted)]">
@@ -722,29 +732,27 @@ export function ManageGamesPage() {
                             </div>
                             <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-1">
                               {cat.parent_category_id && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => copySubcategory(game, cat)}
-                                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
-                                    aria-label={`Copy subcategory ${cat.name}`}
-                                    title="Copy subcategory"
-                                  >
-                                    <ClipboardCopy className="h-3.5 w-3.5" />
-                                    Copy
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => void duplicateSubcategory(cat, game.id)}
-                                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
-                                    aria-label={`Duplicate subcategory ${cat.name}`}
-                                    title="Duplicate subcategory under the same main category"
-                                  >
-                                    <Copy className="h-3.5 w-3.5" />
-                                    Duplicate
-                                  </button>
-                                </>
+                                <button
+                                  type="button"
+                                  onClick={() => copySubcategory(game, cat)}
+                                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
+                                  aria-label={`Copy subcategory ${cat.name}`}
+                                  title="Copy subcategory"
+                                >
+                                  <ClipboardCopy className="h-3.5 w-3.5" />
+                                  Copy
+                                </button>
                               )}
+                              <button
+                                type="button"
+                                onClick={() => void duplicateCategory(cat, game.id)}
+                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--sr-text-muted)] hover:text-[var(--sr-primary)]"
+                                aria-label={`Duplicate ${cat.parent_category_id ? 'subcategory' : 'category'} ${cat.name}`}
+                                title="Duplicate this competition"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                                Duplicate
+                              </button>
                               <button
                                 onClick={() => setShowCatModal({ gameId: game.id, cat, parentCategoryId: cat.parent_category_id })}
                                 className="rounded-md p-1.5 text-[var(--sr-text-muted)] hover:text-[var(--sr-link)]"
@@ -830,12 +838,13 @@ export function ManageGamesPage() {
 
       {showCatModal && (
         <CategoryModal
-          key={`${showCatModal.gameId}:${showCatModal.cat?.id ?? 'new'}:${showCatModal.parentCategoryId ?? 'main'}:${showCatModal.initialName ?? ''}`}
+          key={`${showCatModal.gameId}:${showCatModal.cat?.id ?? 'new'}:${showCatModal.parentCategoryId ?? 'main'}:${showCatModal.initialName ?? ''}:${showCatModal.initialCompetitionType ?? ''}`}
           gameId={showCatModal.gameId}
           category={showCatModal.cat}
           initialName={showCatModal.initialName}
           initialTimingRules={showCatModal.initialTimingRules}
           initialRecord={showCatModal.initialRecord ?? null}
+          initialCompetitionType={showCatModal.initialCompetitionType}
           existingCategories={categoryMap[showCatModal.gameId] ?? []}
           parentCategories={(categoryMap[showCatModal.gameId] ?? []).filter((category) => !category.parent_category_id)}
           initialParentCategoryId={showCatModal.parentCategoryId}
@@ -888,7 +897,10 @@ function GameModal({
   const [featured, setFeatured] = useState(game?.is_featured ?? false);
   const [hidden, setHidden] = useState(game?.is_hidden ?? false);
   const [coverPreviewError, setCoverPreviewError] = useState(false);
+  const [supportsSpeedruns, setSupportsSpeedruns] = useState(true);
+  const [supportsRecords, setSupportsRecords] = useState(false);
   const [categoryNames, setCategoryNames] = useState('');
+  const [recordCategoryNames, setRecordCategoryNames] = useState('');
   const [slugTouched, setSlugTouched] = useState(!!game);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -947,14 +959,35 @@ function GameModal({
       setError('Slug is required.');
       return;
     }
-    const categories = game
+    const categories = game || !supportsSpeedruns
       ? []
       : categoryNames.split('\n').map((name) => name.trim()).filter(Boolean);
+    const recordCategories = game || !supportsRecords
+      ? []
+      : recordCategoryNames
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => {
+            const [namePart, unitPart] = line.split('|');
+            return {
+              name: (namePart ?? '').trim(),
+              unit: (unitPart ?? '').trim() || 'Value',
+            };
+          })
+          .filter((entry) => entry.name);
     const categoryKeys = categories.map((name) => name.toLocaleLowerCase());
     if (new Set(categoryKeys).size !== categoryKeys.length) {
-      setError('Remove duplicate category names before saving.');
+      setError('Remove duplicate speedrun category names before saving.');
       return;
     }
+    const recordKeys = recordCategories.map((entry) => entry.name.toLocaleLowerCase());
+    if (new Set(recordKeys).size !== recordKeys.length) {
+      setError('Remove duplicate record names before saving.');
+      return;
+    }
+    // A speedrun and a record may share a name; each competition type keeps its
+    // own boards and leaderboards.
 
     setSaving(true);
     try {
@@ -984,16 +1017,34 @@ function GameModal({
         if (insErr) throw insErr;
         savedGameId = createdGame.id;
 
-        if (categories.length > 0) {
-          const { error: categoriesError } = await supabase.from('categories').insert(
-            categories.map((name, index) => ({
+        if (categories.length > 0 || recordCategories.length > 0) {
+          const rows = [
+            ...categories.map((name, index) => ({
               game_id: createdGame.id,
               name,
               timing_rules: null,
               parent_category_id: null,
               sort_order: (index + 1) * 10,
-            }))
-          );
+              competition_type: 'speedrun' as const,
+              record_unit: null,
+              record_description: null,
+              record_rules: null,
+              record_higher_is_better: true,
+            })),
+            ...recordCategories.map((entry, index) => ({
+              game_id: createdGame.id,
+              name: entry.name,
+              timing_rules: null,
+              parent_category_id: null,
+              sort_order: (index + 1) * 10,
+              competition_type: 'record' as const,
+              record_unit: entry.unit,
+              record_description: null,
+              record_rules: null,
+              record_higher_is_better: true,
+            })),
+          ];
+          const { error: categoriesError } = await supabase.from('categories').insert(rows);
           if (categoriesError) {
             console.error('save initial game categories failed', categoriesError);
             onSaved(
@@ -1259,27 +1310,114 @@ function GameModal({
 
           {!game && (
             <section className="rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface-2)]/50 p-4">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold text-[var(--sr-text)]">
-                  Speedrun competitions <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
-                </h3>
-                <span className="text-xs text-[var(--sr-text-muted)]">
-                  {categoryNames.split('\n').filter((name) => name.trim()).length} added
-                </span>
-              </div>
-              <label htmlFor="initial-categories" className="mb-1 block text-sm text-[var(--sr-text-dim)]">Add several at once</label>
-              <textarea
-                id="initial-categories"
-                value={categoryNames}
-                onChange={(e) => setCategoryNames(e.target.value)}
-                rows={3}
-                placeholder={'One category per line, for example:\nAny%\n100%'}
-                className="sr-input resize-y"
-                aria-describedby="initial-categories-help"
-              />
-              <p id="initial-categories-help" className="mt-1 text-xs leading-5 text-[var(--sr-text-muted)]">
-                Each line becomes a timed speedrun board. Open the game after creating it to add records, timing rules, or subcategories.
+              <h3 className="text-sm font-semibold text-[var(--sr-text)]">Competition types</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--sr-text-muted)]">
+                Choose what this game runs. You can add, edit, and reorder categories later from
+                the game list. Speedruns and records are stored separately.
               </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <label
+                  className={`flex cursor-pointer items-start gap-2 border px-3 py-2.5 text-sm transition-colors ${
+                    supportsSpeedruns
+                      ? 'border-[var(--sr-primary)] bg-[var(--sr-primary)]/10'
+                      : 'border-[var(--sr-border)] hover:border-[var(--sr-border-hover)]'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={supportsSpeedruns}
+                    onChange={(event) => setSupportsSpeedruns(event.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[var(--sr-primary)]"
+                  />
+                  <span>
+                    <span className="block font-semibold text-[var(--sr-text)]">Speedruns</span>
+                    <span className="text-xs text-[var(--sr-text-muted)]">
+                      Timed boards ranked by fastest completion.
+                    </span>
+                  </span>
+                </label>
+                <label
+                  className={`flex cursor-pointer items-start gap-2 border px-3 py-2.5 text-sm transition-colors ${
+                    supportsRecords
+                      ? 'border-[var(--sr-primary)] bg-[var(--sr-primary)]/10'
+                      : 'border-[var(--sr-border)] hover:border-[var(--sr-border-hover)]'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={supportsRecords}
+                    onChange={(event) => setSupportsRecords(event.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[var(--sr-primary)]"
+                  />
+                  <span>
+                    <span className="block font-semibold text-[var(--sr-text)]">Records</span>
+                    <span className="text-xs text-[var(--sr-text-muted)]">
+                      Numeric boards ranked by the best value.
+                    </span>
+                  </span>
+                </label>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-4">
+                {supportsSpeedruns && (
+                  <div className="border-l-2 border-[var(--sr-primary)] pl-3">
+                    <div className="mb-1 flex items-center justify-between gap-3">
+                      <label htmlFor="initial-categories" className="text-sm font-semibold text-[var(--sr-text)]">
+                        Speedrun categories{' '}
+                        <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
+                      </label>
+                      <span className="text-xs text-[var(--sr-text-muted)]">
+                        {categoryNames.split('\n').filter((name) => name.trim()).length} added
+                      </span>
+                    </div>
+                    <textarea
+                      id="initial-categories"
+                      value={categoryNames}
+                      onChange={(e) => setCategoryNames(e.target.value)}
+                      rows={3}
+                      placeholder={'One category per line, for example:\nAny%\n100%\nAll Bosses'}
+                      className="sr-input resize-y"
+                      aria-describedby="initial-categories-help"
+                    />
+                    <p id="initial-categories-help" className="mt-1 text-xs leading-5 text-[var(--sr-text-muted)]">
+                      Each line becomes a timed speedrun board.
+                    </p>
+                  </div>
+                )}
+
+                {supportsRecords && (
+                  <div className="border-l-2 border-[var(--sr-border-hover)] pl-3">
+                    <div className="mb-1 flex items-center justify-between gap-3">
+                      <label htmlFor="initial-records" className="text-sm font-semibold text-[var(--sr-text)]">
+                        Record categories{' '}
+                        <span className="font-normal text-[var(--sr-text-muted)]">Optional</span>
+                      </label>
+                      <span className="text-xs text-[var(--sr-text-muted)]">
+                        {recordCategoryNames.split('\n').filter((line) => line.trim()).length} added
+                      </span>
+                    </div>
+                    <textarea
+                      id="initial-records"
+                      value={recordCategoryNames}
+                      onChange={(e) => setRecordCategoryNames(e.target.value)}
+                      rows={3}
+                      placeholder={'One record per line as Name | Unit, for example:\nMost Coins | Coins\nHighest Score | Points\nLongest Survival | Seconds'}
+                      className="sr-input resize-y"
+                      aria-describedby="initial-records-help"
+                    />
+                    <p id="initial-records-help" className="mt-1 text-xs leading-5 text-[var(--sr-text-muted)]">
+                      Use <span className="sr-mono">Name | Unit</span>. The unit defaults to
+                      “Value” when omitted. Higher is better unless you change it later.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {!supportsSpeedruns && !supportsRecords && (
+                <p className="mt-3 border-l-2 border-[var(--sr-warn)] pl-3 text-xs text-[var(--sr-text-muted)]">
+                  No competition types selected. Guides and forums will still be available.
+                </p>
+              )}
             </section>
           )}
 
@@ -1308,6 +1446,7 @@ function CategoryModal({
   initialName,
   initialTimingRules,
   initialRecord,
+  initialCompetitionType,
   existingCategories,
   parentCategories,
   initialParentCategoryId,
@@ -1319,6 +1458,7 @@ function CategoryModal({
   initialName?: string | undefined;
   initialTimingRules?: string | null | undefined;
   initialRecord?: Category | null | undefined;
+  initialCompetitionType?: CompetitionType | undefined;
   existingCategories: Category[];
   parentCategories: Category[];
   initialParentCategoryId: string | null;
@@ -1327,7 +1467,10 @@ function CategoryModal({
 }) {
   const [name, setName] = useState(initialName ?? category?.name ?? '');
   const [competitionType, setCompetitionType] = useState<CompetitionType>(
-    category?.competition_type ?? initialRecord?.competition_type ?? 'speedrun'
+    category?.competition_type ??
+      initialRecord?.competition_type ??
+      initialCompetitionType ??
+      'speedrun'
   );
   const [timingRules, setTimingRules] = useState(initialTimingRules ?? category?.timing_rules ?? '');
   const [recordUnit, setRecordUnit] = useState(
@@ -1394,10 +1537,15 @@ function CategoryModal({
     const dupe = parentCategoryId
       ? undefined
       : existingCategories.find(
-          (c) => c.name.toLowerCase() === trimmedName.toLowerCase() && c.id !== category?.id
+          (c) =>
+            c.name.toLowerCase() === trimmedName.toLowerCase() &&
+            c.id !== category?.id &&
+            c.competition_type === competitionType
         );
     if (dupe) {
-      setError('A category with that name already exists for this game.');
+      setError(
+        `A ${isRecord ? 'record' : 'speedrun'} category with that name already exists for this game. The same name is allowed under the other competition type.`
+      );
       return;
     }
 
@@ -1474,9 +1622,12 @@ function CategoryModal({
         typeof cause.message === 'string'
           ? cause.message
           : '';
-      if (detail.includes('categories_game_id_name_key')) {
+      if (
+        detail.includes('categories_game_id_name_key') ||
+        detail.includes('categories_main_name_key')
+      ) {
         setError(
-          'The database still blocks duplicate category names. Apply drizzle/migrations/0006_allow_duplicate_subcategories.sql to the project database, then try again.'
+          'The database still blocks duplicate category names. Apply drizzle/migrations/0010_guides_and_forums.sql to the project database, then try again.'
         );
         return;
       }

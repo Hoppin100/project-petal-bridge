@@ -165,3 +165,91 @@ export interface AssessmentHistoryEntry {
   actor_id: string | null;
   created_at: string;
 }
+
+/* ------------------------------------------------------------------ *
+ * Guides
+ * ------------------------------------------------------------------ */
+
+export type GuideCategory = 'beginner' | 'advanced' | 'walkthrough' | 'tips' | 'glitch';
+export type GuideStatus = 'draft' | 'published';
+
+export interface Guide {
+  id: string;
+  game_id: string;
+  author_id: string;
+  title: string;
+  summary: string | null;
+  category: GuideCategory;
+  status: GuideStatus;
+  cover_image_url: string | null;
+  helpful_count: number;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+  // joined fields (optional)
+  author?: Profile | undefined;
+}
+
+export interface GuideSection {
+  id: string;
+  guide_id: string;
+  heading: string | null;
+  body: string;
+  image_url: string | null;
+  video_url: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+/* ------------------------------------------------------------------ *
+ * Game forums
+ * ------------------------------------------------------------------ */
+
+export type ForumCategory = 'general' | 'help' | 'strategies' | 'questions' | 'tips';
+export type ForumReportStatus = 'open' | 'reviewed' | 'dismissed';
+
+export interface ForumThread {
+  id: string;
+  game_id: string;
+  author_id: string;
+  title: string;
+  body: string;
+  category: ForumCategory;
+  is_pinned: boolean;
+  is_locked: boolean;
+  is_solved: boolean;
+  accepted_post_id: string | null;
+  score: number;
+  created_at: string;
+  updated_at: string;
+  // joined fields (optional)
+  author?: Profile | undefined;
+  reply_count?: number | undefined;
+}
+
+export interface ForumPost {
+  id: string;
+  thread_id: string;
+  parent_post_id: string | null;
+  author_id: string;
+  body: string;
+  score: number;
+  created_at: string;
+  updated_at: string;
+  // joined fields (optional)
+  author?: Profile | undefined;
+  replies?: ForumPost[] | undefined;
+}
+
+export interface ForumReport {
+  id: string;
+  reporter_id: string;
+  thread_id: string | null;
+  post_id: string | null;
+  reason: string;
+  status: ForumReportStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
