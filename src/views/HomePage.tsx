@@ -8,10 +8,12 @@ import { useAuth } from '@/lib/auth';
 import { linkHref } from '@/lib/router';
 import { formatTime, timeAgo } from '@/lib/format';
 import { compareRunTimes, isSlowerIsBetterGame } from '@/lib/game-rules';
+import { useOwnerPreview } from '@/lib/preview';
 
 export function HomePage() {
   const { profile } = useAuth();
   const isOwner = profile?.role === 'owner';
+  const ownerPreview = useOwnerPreview();
   const [games, setGames] = useState<Game[]>([]);
   const [recentRuns, setRecentRuns] = useState<Run[]>([]);
   const [records, setRecords] = useState<Run[]>([]);
@@ -92,6 +94,9 @@ export function HomePage() {
 
   const placeLabel = (rank: number) => rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
   const rankOf = (run: Run) => run.status === 'verified' ? records.findIndex((r) => r.id === run.id) + 1 : 0;
+  const ruleTitleClass = ownerPreview
+    ? 'sr-rule-title'
+    : 'sr-rule-title normal-case tracking-normal';
 
   return (
     <div className="sr-container pb-10">
@@ -103,12 +108,23 @@ export function HomePage() {
             Community leaderboards
           </p>
           <h1 className="text-3xl font-bold leading-tight sm:text-4xl">
-            Every run counts.<br />
-            <span className="text-[var(--sr-primary)]">Every split is checked.</span>
+            Every run counts.
+            {ownerPreview && (
+              <>
+                <br />
+                <span className="text-[var(--sr-primary)]">Every split is checked.</span>
+              </>
+            )}
           </h1>
           <p className="mt-3 text-sm leading-6 text-[var(--sr-text-dim)]">
-            Pick a game, post your time with video proof, and get reviewed by the
-            team. Verified runs go straight onto the board.
+            {ownerPreview ? (
+              <>
+                Pick a game, post your time with video proof, and get reviewed by the
+                team. Verified runs go straight onto the board.
+              </>
+            ) : (
+              <>Find a game, submit your best time, and see how you stack up.</>
+            )}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <a href={linkHref('/games')} className="sr-btn-primary">
@@ -123,7 +139,7 @@ export function HomePage() {
               </a>
             )}
           </div>
-          {!loading && games.length > 0 && (
+          {ownerPreview && !loading && games.length > 0 && (
             <p className="sr-mono mt-5 text-xs text-[var(--sr-text-muted)]">
               {games.length} {games.length === 1 ? 'game' : 'games'} tracked
               {featuredGames.length > 0 && <> · {featuredGames.length} featured</>}
@@ -132,7 +148,7 @@ export function HomePage() {
         </div>
 
         <aside aria-label="Current world records" className="min-w-0 border-l-2 border-[var(--sr-primary)] pl-4 lg:border-l lg:pl-0">
-          <p className="sr-rule-title">Current records</p>
+          <p className={ruleTitleClass}>{ownerPreview ? 'Current records' : 'World records'}</p>
           {loading ? (
             <div className="py-4"><LoadingRows /></div>
           ) : records.length ? (
@@ -155,7 +171,7 @@ export function HomePage() {
           ) : (
             <p className="mt-4 text-sm text-[var(--sr-text-muted)]">Records appear here once runs are verified.</p>
           )}
-          <a href={linkHref('/games')} className="mt-3 inline-flex text-xs font-semibold text-[var(--sr-link)] hover:underline">All games and boards →</a>
+          <a href={linkHref('/games')} className="mt-3 inline-flex text-xs font-semibold text-[var(--sr-link)] hover:underline">{ownerPreview ? 'All games and boards →' : 'All games'}</a>
         </aside>
       </section>
 
@@ -164,7 +180,7 @@ export function HomePage() {
       {featuredGames.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-3">
-            <h2 className="sr-rule-title flex-1">Featured games</h2>
+            <h2 className={`${ruleTitleClass} flex-1`}>Featured games</h2>
             <a href={linkHref('/games')} className="sr-link text-xs font-semibold">See all</a>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">{featuredGames.slice(0, 6).map((game) => <GameCard key={game.id} game={game} />)}</div>
@@ -173,9 +189,11 @@ export function HomePage() {
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="min-w-0" aria-label="Latest runs">
-          <h2 className="sr-rule-title">
+          <h2 className={ruleTitleClass}>
             <span className="text-[var(--sr-text)]">Latest runs</span>
-            <span className="text-xs font-medium normal-case tracking-normal text-[var(--sr-text-muted)]">New submissions and review decisions</span>
+            <span className="text-xs font-medium normal-case tracking-normal text-[var(--sr-text-muted)]">
+              {ownerPreview ? 'New submissions and review decisions' : 'New submissions and decisions'}
+            </span>
           </h2>
           <div className="mt-2">
             {loading ? <div className="py-3"><LoadingRows /></div> : recentRuns.length ? (
@@ -213,7 +231,12 @@ export function HomePage() {
 
         <aside className="min-w-0 space-y-8">
           <section aria-label="Popular games">
-            <h2 className="sr-rule-title">Popular games</h2>
+            <div className="flex items-center gap-3">
+              <h2 className={`${ruleTitleClass} flex-1`}>Popular games</h2>
+              {!ownerPreview && (
+                <a href={linkHref('/games')} className="sr-link text-xs font-semibold">See all</a>
+              )}
+            </div>
             {loading ? <div className="py-4"><LoadingRows /></div> : popularGames.length ? (
               <ul className="mt-2 divide-y divide-[var(--sr-border)] border-y border-[var(--sr-border)]">
                 {popularGames.map((game, index) => (
@@ -233,8 +256,9 @@ export function HomePage() {
             ) : <div className="mt-2"><EmptyLine text="Games show here once they are added." href="/games" /></div>}
           </section>
 
-          <section aria-label="Community">
-            <h2 className="sr-rule-title">Community</h2>
+          {ownerPreview && (
+            <section aria-label="Community">
+              <h2 className={ruleTitleClass}>Community</h2>
             <div className="mt-2 divide-y divide-[var(--sr-border)] border-y border-[var(--sr-border)]">
               <a href="https://discord.gg/JySJqfagAq" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 py-3 group">
                 <MessageSquare aria-hidden="true" className="h-4 w-4 flex-shrink-0 text-[var(--sr-primary)]" />
@@ -258,7 +282,8 @@ export function HomePage() {
                 </span>
               </a>
             </div>
-          </section>
+            </section>
+          )}
         </aside>
       </div>
     </div>

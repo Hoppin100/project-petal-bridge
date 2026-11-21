@@ -1,9 +1,47 @@
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/lib/auth';
 import { linkHref } from '@/lib/router';
+import { useOwnerPreview } from '@/lib/preview';
 
 export function Footer() {
   const { profile } = useAuth();
+  const ownerPreview = useOwnerPreview();
+
+  if (!ownerPreview) {
+    const visitorLinks = [
+      { label: 'Home', href: linkHref('/'), external: false },
+      { label: 'Join our Discord', href: 'https://discord.gg/JySJqfagAq', external: true },
+      { label: 'YouTube', href: 'https://www.youtube.com/@SplitRushOffical', external: true },
+      { label: 'Games', href: linkHref('/games'), external: false },
+      { label: 'Submit a run', href: linkHref('/submit'), external: false },
+    ];
+
+    return (
+      <footer className="mt-auto border-t border-[var(--sr-border)] bg-[var(--sr-bg-2)]">
+        <div className="sr-container flex flex-col gap-5 py-8 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <Logo size="sm" />
+            <p className="mt-2 text-xs text-[var(--sr-text-muted)]">Speedrun leaderboards</p>
+          </div>
+          <nav aria-label="Footer navigation">
+            <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+              {visitorLinks.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                    className="text-[var(--sr-text-dim)] transition-colors hover:text-[var(--sr-primary)]"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+      </footer>
+    );
+  }
 
   const internalLinks = [
     { label: 'Home', href: linkHref('/') },
