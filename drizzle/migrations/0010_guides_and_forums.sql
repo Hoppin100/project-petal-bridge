@@ -118,7 +118,16 @@ CREATE POLICY guides_select_visible ON public.guides
 DROP POLICY IF EXISTS guides_insert_own ON public.guides;
 CREATE POLICY guides_insert_own ON public.guides
   FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = author_id);
+  WITH CHECK (
+    auth.uid() = author_id
+    AND (
+      public.is_game_staff()
+      OR EXISTS (
+        SELECT 1 FROM public.games g
+        WHERE g.id = game_id AND NOT g.is_hidden
+      )
+    )
+  );
 
 DROP POLICY IF EXISTS guides_update_own ON public.guides;
 CREATE POLICY guides_update_own ON public.guides
@@ -413,7 +422,16 @@ CREATE POLICY forum_threads_select_visible ON public.forum_threads
 DROP POLICY IF EXISTS forum_threads_insert_own ON public.forum_threads;
 CREATE POLICY forum_threads_insert_own ON public.forum_threads
   FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = author_id);
+  WITH CHECK (
+    auth.uid() = author_id
+    AND (
+      public.is_game_staff()
+      OR EXISTS (
+        SELECT 1 FROM public.games g
+        WHERE g.id = game_id AND NOT g.is_hidden
+      )
+    )
+  );
 
 DROP POLICY IF EXISTS forum_threads_update_own ON public.forum_threads;
 CREATE POLICY forum_threads_update_own ON public.forum_threads
@@ -442,7 +460,18 @@ CREATE POLICY forum_posts_select_visible ON public.forum_posts
 DROP POLICY IF EXISTS forum_posts_insert_own ON public.forum_posts;
 CREATE POLICY forum_posts_insert_own ON public.forum_posts
   FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = author_id);
+  WITH CHECK (
+    auth.uid() = author_id
+    AND (
+      public.is_game_staff()
+      OR EXISTS (
+        SELECT 1
+        FROM public.forum_threads t
+        JOIN public.games g ON g.id = t.game_id
+        WHERE t.id = thread_id AND NOT g.is_hidden
+      )
+    )
+  );
 
 DROP POLICY IF EXISTS forum_posts_update_own ON public.forum_posts;
 CREATE POLICY forum_posts_update_own ON public.forum_posts
