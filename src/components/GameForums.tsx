@@ -12,11 +12,12 @@ import {
   Pin,
   Plus,
   Search,
+  ShieldAlert,
   Trash2,
   Unlock,
   X,
 } from 'lucide-react';
-import type { ForumCategory, ForumPost, ForumThread, Game } from '@/lib/types';
+import type { ForumCategory, ForumPost, ForumReport, ForumThread, Game } from '@/lib/types';
 import {
   FORUM_CATEGORIES,
   acceptAnswer,
@@ -27,11 +28,13 @@ import {
   deleteThread,
   fetchGameThreads,
   fetchMyForumVotes,
+  fetchOpenReports,
   fetchThread,
   fetchThreadPosts,
   filterThreads,
   forumCategoryLabel,
   reportContent,
+  resolveReport,
   setThreadFlags,
   sortThreads,
   updatePost,
@@ -74,6 +77,8 @@ export function GameForums({ game }: { game: Game }) {
   const [view, setView] = useState<ForumView>({ kind: 'list' });
   const [votes, setVotes] = useState<Map<string, number>>(new Map());
   const [notice, setNotice] = useState('');
+  const [reports, setReports] = useState<ForumReport[]>([]);
+  const [reportActionError, setReportActionError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,8 +87,14 @@ export function GameForums({ game }: { game: Game }) {
     setThreads(result.threads);
     setMigrationMissing(result.migrationMissing);
     setLoadError(result.error ?? '');
+    if (isStaff(profile?.role)) {
+      const reportResult = await fetchOpenReports(game.id);
+      setReports(reportResult.reports);
+    } else {
+      setReports([]);
+    }
     setLoading(false);
-  }, [game.id]);
+  }, [game.id, profile?.role]);
 
   useEffect(() => {
     void load();
@@ -110,6 +121,17 @@ export function GameForums({ game }: { game: Game }) {
       else copy.set(key, value);
       return copy;
     });
+  }
+
+  async function handleResolveReport(reportId: string, status: 'reviewed' | 'dismissed') {
+    if (!profile) return;
+    setReportActionError('');
+    const resolveError = await resolveReport(reportId, status, profile.id);
+    if (resolveError) {
+      setReportActionError(resolveError);
+      return;
+    }
+    setReports((current) => current.filter((report) => report.id !== reportId));
   }
 
   const visibleThreads = useMemo(
@@ -191,6 +213,74 @@ export function GameForums({ game }: { game: Game }) {
         <p role="alert" className="mb-3 rounded-sm border border-[var(--sr-danger)]/40 bg-[var(--sr-bad-bg)] px-3 py-2 text-sm text-[var(--sr-danger)]">
           {loadError}
         </p>
+      )}
+
+      {isStaff(profile?.role) && reports.length > 0 && (
+        <details className="mb-4 border border-[var(--sr-border)] bg-[var(--sr-surface)]">
+          <summary className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-semibold text-[var(--sr-text)]">
+            <ShieldAlert aria-hidden="true" className="h-4 w-4 text-[var(--sr-primary)]" />
+            Reported content
+            <span className="sr-badge bg-[var(--sr-primary)]/10 text-[var(--sr-primary)]">
+              {reports.length} open
+            </span>
+          </summary>
+          <div className="border-t border-[var(--sr-border)]">
+            {reportActionError && (
+              <p role="alert" className="border-b border-[var(--sr-border)] px-3 py-2 text-sm text-[var(--sr-danger)]">
+                {reportActionError}
+              </p>
+            )}
+            <ul className="divide-y divide-[var(--sr-border)]">
+              {reports.map((report) => (
+                <li key={report.id} className="px-3 py-3">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--sr-text-muted)]">
+                    <span className="font-semibold text-[var(--sr-text-dim)]">
+                      {report.post_id ? 'Reply' : 'Thread'}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>reported by {report.reporter?.username ?? 'a member'}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{timeAgo(report.created_at)}</span>
+                  </div>
+                  <p className="mt-1 break-words text-sm text-[var(--sr-text)]">{report.reason}</p>
+                  {report.post_excerpt && (
+                    <p className="mt-1 break-words border-l-2 border-[var(--sr-border)] pl-2 text-xs text-[var(--sr-text-muted)]">
+                      “{report.post_excerpt}”
+                    </p>
+                  )}
+                  {report.thread_title && (
+                    <button
+                      type="button"
+                      className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[var(--sr-link)] hover:underline"
+                      onClick={() => {
+                        const id = report.target_thread_id ?? report.thread_id;
+                        if (id) setView({ kind: 'thread', threadId: id });
+                      }}
+                    >
+                      Open “{report.thread_title}”
+                    </button>
+                  )}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="sr-btn-ghost text-xs"
+                      onClick={() => void handleResolveReport(report.id, 'reviewed')}
+                    >
+                      Mark reviewed
+                    </button>
+                    <button
+                      type="button"
+                      className="sr-btn-ghost text-xs"
+                      onClick={() => void handleResolveReport(report.id, 'dismissed')}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>
       )}
 
       {migrationMissing ? (

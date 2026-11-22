@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { ForumCategory, ForumPost, ForumThread, Profile } from '@/lib/types';
+import type { ForumCategory, ForumPost, ForumReport, ForumThread, Profile } from '@/lib/types';
 
 export const FORUM_THREAD_COLUMNS =
   'id, game_id, author_id, title, body, category, is_pinned, is_locked, is_solved, accepted_post_id, score, created_at, updated_at';
@@ -297,4 +297,111 @@ export async function fetchMyForumVotes(userId: string): Promise<Map<string, num
     votes.set(key, row.value);
   }
   return votes;
+}
+
+/**
+ * Open reports for one game, with enough context for staff to judge them.
+ * The caller is expected to be game staff; RLS returns nothing otherwise.
+ */
+export async function fetchOpenReports(gameId: string): Promise<{
+  reports: ForumReport[];
+  error: string | null;
+  migrationMissing: boolean;
+}> {
+  const { data, error } = await supabase
+    .from('forum_reports')
+    .select('id, reporter_id, thread_id, post_id, reason, status, reviewed_by, reviewed_at, created_at')
+    .eq('status', 'open')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    const missing = missingTable(error);
+    return { reports: [], error: missing ? null : error.message, migrationMissing: missing };
+  }
+
+  const rows = (data as ForumReport[]) ?? [];
+  if (rows.length === 0) return { reports: [], error: null, migrationMissing: false };
+
+  const postIds = rows
+    .map((row) => row.post_id)
+    .filter((id): id is string => Boolean(id));
+  const postsById = new Map<string, { thread_id: string; body: string }>();
+  if (postIds.length > 0) {
+    const { data: postRows } = await supabase
+      .from('forum_posts')
+      .select('id, thread_id, body')
+      .in('id', postIds);
+    for (const post of (postRows as Array<{ id: string; thread_id: string; body: string }>) ?? []) {
+      postsById.set(post.id, { thread_id: post.thread_id, body: post.body });
+    }
+  }
+
+  const threadIds = new Set<string>();
+  for (const row of rows) {
+    if (row.thread_id) threadIds.add(row.thread_id);
+    if (row.post_id) {
+      const parent = postsById.get(row.post_id);
+      if (parent) threadIds.add(parent.thread_id);
+    }
+  }
+
+  const threadsById = new Map<string, { game_id: string; title: string }>();
+  if (threadIds.size > 0) {
+    const { data: threadRows } = await supabase
+      .from('forum_threads')
+      .select('id, game_id, title')
+      .in('id', [...threadIds]);
+    for (const thread of (threadRows as Array<{ id: string; game_id: string; title: string }>) ?? []) {
+      threadsById.set(thread.id, { game_id: thread.game_id, title: thread.title });
+    }
+  }
+
+  const reporterIds = [...new Set(rows.map((row) => row.reporter_id))];
+  const reportersById = new Map<string, Profile>();
+  if (reporterIds.length > 0) {
+    const { data: profileRows } = await supabase
+      .from('profiles')
+      .select('id, username, role, bio, avatar_url, created_at')
+      .in('id', reporterIds);
+    for (const profile of (profileRows as Profile[]) ?? []) {
+      reportersById.set(profile.id, profile);
+    }
+  }
+
+  const reports: ForumReport[] = [];
+  for (const row of rows) {
+    const parentPost = row.post_id ? postsById.get(row.post_id) : undefined;
+    const threadId = row.thread_id ?? parentPost?.thread_id ?? null;
+    const thread = threadId ? threadsById.get(threadId) : undefined;
+    if (!thread || thread.game_id !== gameId) continue;
+    reports.push({
+      ...row,
+      reporter: reportersById.get(row.reporter_id),
+      thread_title: thread.title,
+      target_thread_id: threadId ?? undefined,
+      post_excerpt: parentPost
+        ? parentPost.body.length > 180
+          ? `${parentPost.body.slice(0, 180)}…`
+          : parentPost.body
+        : undefined,
+    });
+  }
+
+  return { reports, error: null, migrationMissing: false };
+}
+
+export async function resolveReport(
+  reportId: string,
+  status: 'reviewed' | 'dismissed',
+  reviewerId: string,
+): Promise<string | null> {
+  const { error } = await supabase
+    .from('forum_reports')
+    .update({
+      status,
+      reviewed_by: reviewerId,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', reportId);
+  return error ? error.message : null;
 }

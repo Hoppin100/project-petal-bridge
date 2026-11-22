@@ -164,6 +164,14 @@ export function RecordLeaderboard({
                     <span className="sr-mono whitespace-nowrap text-sm font-semibold text-[var(--sr-text)]">
                       {formatRecordValue(entry.value_numeric)}
                       {unit && <span className="ml-1 text-xs text-[var(--sr-text-muted)]">{unit}</span>}
+                      {entry.rank === 1 && (
+                        <span
+                          className="ml-1 rounded-sm bg-[var(--sr-gold)]/15 px-1 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-[var(--sr-gold)]"
+                          title="World record"
+                        >
+                          WR
+                        </span>
+                      )}
                       <BadgeCheck
                         className="ml-1 inline h-3.5 w-3.5 text-[var(--sr-primary)]"
                         aria-label="Verified"
@@ -241,6 +249,14 @@ export function RecordLeaderboard({
                       </td>
                       <td className="sr-mono whitespace-nowrap px-2 py-3 font-semibold tabular-nums text-[var(--sr-text)]">
                         {formatRecordValue(entry.value_numeric)}
+                        {entry.rank === 1 && (
+                          <span
+                            className="ml-1.5 rounded-sm bg-[var(--sr-gold)]/15 px-1 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-[var(--sr-gold)]"
+                            title="World record"
+                          >
+                            WR
+                          </span>
+                        )}
                         <BadgeCheck
                           className="ml-1 inline h-3.5 w-3.5 text-[var(--sr-primary)]"
                           aria-label="Verified"

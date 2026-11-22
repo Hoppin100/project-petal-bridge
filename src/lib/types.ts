@@ -251,5 +251,10 @@ export interface ForumReport {
   reviewed_by: string | null;
   reviewed_at: string | null;
   created_at: string;
+  // joined fields (optional)
+  reporter?: Profile | undefined;
+  thread_title?: string | undefined;
+  post_excerpt?: string | undefined;
+  target_thread_id?: string | undefined;
 }
 
