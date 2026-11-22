@@ -36,6 +36,7 @@ import {
 import {
   categoriesForType,
   gameTabs,
+  groupCategories,
   resolveGameTab,
   supportedCompetitionTypes,
   type GameTab,
@@ -55,6 +56,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
   const [activeSpeedrunId, setActiveSpeedrunId] = useState<string | null>(null);
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<GameTab>('overview');
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -130,6 +132,7 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
       setActiveSpeedrunId(firstSpeedrun?.id ?? null);
       setActiveRecordId(firstRecord?.id ?? null);
       setExpandedCategoryId(null);
+      setExpandedRecordId(null);
       setActiveTab('overview');
 
       setLoading(false);
@@ -400,6 +403,8 @@ export function GameDetailPage({ slug }: GameDetailPageProps) {
             activeId={activeRecordId}
             activeRecord={activeRecord}
             onSelect={setActiveRecordId}
+            expandedCategoryId={expandedRecordId}
+            onExpand={setExpandedRecordId}
             submissions={recordSubmissions}
             runnerMap={runnerMap}
             recordsUnavailable={recordsUnavailable}
@@ -792,6 +797,8 @@ function RecordPanel({
   activeId,
   activeRecord,
   onSelect,
+  expandedCategoryId,
+  onExpand,
   submissions,
   runnerMap,
   recordsUnavailable,
@@ -801,6 +808,8 @@ function RecordPanel({
   activeId: string | null;
   activeRecord: Category | undefined;
   onSelect: (id: string) => void;
+  expandedCategoryId: string | null;
+  onExpand: (id: string | null) => void;
   submissions: RecordSubmission[];
   runnerMap: Record<string, Profile>;
   recordsUnavailable: boolean;
@@ -809,7 +818,22 @@ function RecordPanel({
     return <NoCategories />;
   }
 
-  const mainCategories = categories.filter((category) => !category.parent_category_id);
+  const groups = groupCategories(categories);
+  const orphanCategories = categories.filter(
+    (category) =>
+      category.parent_category_id &&
+      !categories.some((parent) => parent.id === category.parent_category_id),
+  );
+  const mainCategories = groups.map((group) => group.main);
+  const activeParentId = activeRecord?.parent_category_id ?? activeId;
+  const activeGroup = groups.find(
+    (group) => group.main.id === activeParentId || group.children.some((child) => child.id === activeId),
+  );
+  const visibleSubcategories =
+    activeGroup?.main.id === expandedCategoryId ? activeGroup.children : [];
+  const flatCategories = mainCategories.length > 0 ? null : orphanCategories;
+  const mainCount = flatCategories ? flatCategories.length : mainCategories.length;
+  const subcategoryCount = groups.reduce((count, group) => count + group.children.length, 0);
 
   return (
     <section className="sr-panel p-4 sm:p-5" aria-label="Record leaderboards">
@@ -822,7 +846,9 @@ function RecordPanel({
           <h2 className="text-lg font-bold">Numeric record boards</h2>
         </div>
         <span className="text-xs text-[var(--sr-text-muted)]">
-          {mainCategories.length} {mainCategories.length === 1 ? 'competition' : 'competitions'}
+          {mainCount} {mainCount === 1 ? 'competition' : 'competitions'}
+          {subcategoryCount > 0 &&
+            ` · ${subcategoryCount} ${subcategoryCount === 1 ? 'variant' : 'variants'}`}
         </span>
       </div>
 
@@ -835,26 +861,81 @@ function RecordPanel({
       ) : (
         <>
           <div className="flex gap-1 overflow-x-auto border-b border-[var(--sr-border)]" role="group" aria-label="Record competition">
-            {categories.map((category) => {
-              const isActive = activeId === category.id;
-              const isSub = Boolean(category.parent_category_id);
-              return (
-                <button
-                  key={category.id}
-                  aria-pressed={isActive}
-                  onClick={() => onSelect(category.id)}
-                  className={`inline-flex flex-shrink-0 items-center gap-1 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
-                    isActive
-                      ? 'border-[var(--sr-primary)] text-[var(--sr-text)]'
-                      : 'border-transparent text-[var(--sr-text-muted)] hover:text-[var(--sr-text)]'
-                  } ${isSub ? 'pl-4 text-[13px] font-medium' : ''}`}
-                >
-                  {isSub && <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />}
-                  {category.name}
-                </button>
-              );
-            })}
+            {flatCategories
+              ? flatCategories.map((category) => {
+                  const isActive = activeId === category.id;
+                  return (
+                    <button
+                      key={category.id}
+                      aria-pressed={isActive}
+                      onClick={() => onSelect(category.id)}
+                      className={`inline-flex flex-shrink-0 items-center gap-1 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
+                        isActive
+                          ? 'border-[var(--sr-primary)] text-[var(--sr-text)]'
+                          : 'border-transparent text-[var(--sr-text-muted)] hover:text-[var(--sr-text)]'
+                      }`}
+                    >
+                      {category.name}
+                    </button>
+                  );
+                })
+              : groups.map((group) => {
+                  const isActive = activeParentId === group.main.id;
+                  const hasSubcategories = group.children.length > 0;
+                  const isExpanded = expandedCategoryId === group.main.id;
+                  return (
+                    <button
+                      key={group.main.id}
+                      aria-pressed={isActive}
+                      onClick={() => {
+                        onSelect(group.main.id);
+                        onExpand(hasSubcategories ? (isExpanded ? null : group.main.id) : null);
+                      }}
+                      className={`inline-flex flex-shrink-0 items-center gap-1 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
+                        isActive
+                          ? 'border-[var(--sr-primary)] text-[var(--sr-text)]'
+                          : 'border-transparent text-[var(--sr-text-muted)] hover:text-[var(--sr-text)]'
+                      }`}
+                    >
+                      {group.main.name}
+                      {hasSubcategories &&
+                        (isExpanded ? (
+                          <ChevronDown aria-hidden="true" className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight aria-hidden="true" className="h-4 w-4" />
+                        ))}
+                    </button>
+                  );
+                })}
           </div>
+
+          {visibleSubcategories.length > 0 && (
+            <div
+              className="mb-5 border-b border-[var(--sr-border)] bg-[var(--sr-surface)] px-3 py-3"
+              aria-label={`Record variants under ${activeGroup?.main.name ?? 'competition'}`}
+            >
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--sr-text-muted)]">
+                Variants of {activeGroup?.main.name}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {visibleSubcategories.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    aria-pressed={activeId === category.id}
+                    onClick={() => onSelect(category.id)}
+                    className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                      activeId === category.id
+                        ? 'border-[var(--sr-primary)] bg-[var(--sr-primary)]/10 text-[var(--sr-text)]'
+                        : 'border-[var(--sr-border)] text-[var(--sr-text-muted)] hover:border-[var(--sr-border-hover)] hover:text-[var(--sr-text)]'
+                    }`}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {activeRecord && (
             <div className="mb-5 mt-4 flex flex-col gap-2">

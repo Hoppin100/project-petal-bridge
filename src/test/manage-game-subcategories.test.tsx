@@ -267,4 +267,34 @@ describe('Manage game subcategories', () => {
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Add category' })
     ).toBeInTheDocument();
   });
+
+  it('shows the supported competition types when editing a game and starts the right form', async () => {
+    database.categories.push({
+      id: 'record-points',
+      game_id: 'game-id',
+      parent_category_id: null,
+      name: 'Highest Score',
+      timing_rules: null,
+      sort_order: 30,
+      competition_type: 'record',
+      record_unit: 'Points',
+      record_higher_is_better: true,
+    });
+
+    render(<ManageGamesPage />);
+    fireEvent.click(await screen.findByTitle('Edit game'));
+
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByText('Competition types')).toBeInTheDocument();
+    expect(dialog.getByText('2 boards')).toBeInTheDocument();
+    expect(dialog.getByText('1 board')).toBeInTheDocument();
+
+    fireEvent.click(dialog.getByRole('button', { name: 'Add record category' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /Edit game/ })).toBeNull();
+      expect(screen.getByRole('radio', { name: /^Record/ })).toBeChecked();
+    });
+    expect(screen.getByText('New record')).toBeInTheDocument();
+  });
 });

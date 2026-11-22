@@ -693,7 +693,7 @@ export function ManageGamesPage() {
                                   className="rounded-md p-0.5 text-[var(--sr-text-muted)] hover:bg-[var(--sr-surface-3)] hover:text-[var(--sr-primary)] disabled:opacity-30"
                                 ><ArrowDown className="h-3.5 w-3.5" /></button>
                               </div>
-                              <span className="sr-mono flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm bg-[var(--sr-surface-2)] text-xs font-semibold text-[var(--sr-primary)]">{cat.parent_category_id ? 'â†³' : String(index + 1).padStart(2, '0')}</span>
+                              <span className="sr-mono flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm bg-[var(--sr-surface-2)] text-xs font-semibold text-[var(--sr-primary)]">{cat.parent_category_id ? '↳' : String(index + 1).padStart(2, '0')}</span>
                               <div className="min-w-0">
                                 <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-[var(--sr-text)]">
                                   {cat.name}
@@ -823,6 +823,19 @@ export function ManageGamesPage() {
       {showGameModal && (
         <GameModal
           game={editingGame}
+          gameCategories={editingGame ? categoryMap[editingGame.id] ?? [] : []}
+          onAddCategory={(type) => {
+            if (!editingGame) return;
+            const gameId = editingGame.id;
+            setShowGameModal(false);
+            void loadCategories(gameId);
+            setShowCatModal({
+              gameId,
+              cat: null,
+              parentCategoryId: null,
+              initialCompetitionType: type,
+            });
+          }}
           onClose={() => setShowGameModal(false)}
           onSaved={(gameId, notice) => {
             setShowGameModal(false);
@@ -881,10 +894,14 @@ function slugify(text: string): string {
 
 function GameModal({
   game,
+  gameCategories,
+  onAddCategory,
   onClose,
   onSaved,
 }: {
   game: Game | null;
+  gameCategories: Category[];
+  onAddCategory: (type: CompetitionType) => void;
   onClose: () => void;
   onSaved: (gameId?: string, notice?: string) => void;
 }) {
@@ -909,6 +926,13 @@ function GameModal({
     status: 'idle' | 'checking' | 'found' | 'not-found' | 'error';
     games: Array<{ id: string; name: string; url: string; exactMatch: boolean }>;
   }>({ query: '', status: 'idle', games: [] });
+
+  const speedrunCount = gameCategories.filter(
+    (category) => !category.parent_category_id && !isRecordCategory(category)
+  ).length;
+  const recordCount = gameCategories.filter(
+    (category) => !category.parent_category_id && isRecordCategory(category)
+  ).length;
 
   useEffect(() => {
     if (!slugTouched) setSlug(slugify(title));
@@ -1308,7 +1332,72 @@ function GameModal({
           </label>
           </section>
 
-          {!game && (
+          {game ? (
+            <section className="rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface-2)]/50 p-4">
+              <h3 className="text-sm font-semibold text-[var(--sr-text)]">Competition types</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--sr-text-muted)]">
+                Speedruns and records are tracked separately. Add a board below to enable that
+                tab; delete every board of a type to hide it. Categories keep their own names,
+                rules, and leaderboards.
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div
+                  className={`border px-3 py-2.5 ${
+                    speedrunCount > 0
+                      ? 'border-[var(--sr-primary)] bg-[var(--sr-primary)]/10'
+                      : 'border-[var(--sr-border)]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-[var(--sr-text)]">Speedruns</span>
+                    <span className="sr-mono text-xs text-[var(--sr-text-muted)]">
+                      {speedrunCount} {speedrunCount === 1 ? 'board' : 'boards'}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-[var(--sr-text-muted)]">
+                    {speedrunCount > 0
+                      ? 'Timed leaderboards are live on this game page.'
+                      : 'No timed boards yet, so the Speedruns tab is hidden.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onAddCategory('speedrun')}
+                    className="sr-btn-ghost mt-2 text-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add speedrun category
+                  </button>
+                </div>
+                <div
+                  className={`border px-3 py-2.5 ${
+                    recordCount > 0
+                      ? 'border-[var(--sr-primary)] bg-[var(--sr-primary)]/10'
+                      : 'border-[var(--sr-border)]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-[var(--sr-text)]">Records</span>
+                    <span className="sr-mono text-xs text-[var(--sr-text-muted)]">
+                      {recordCount} {recordCount === 1 ? 'board' : 'boards'}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-[var(--sr-text-muted)]">
+                    {recordCount > 0
+                      ? 'Numeric leaderboards are live on this game page.'
+                      : 'No record boards yet, so the Records tab is hidden.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onAddCategory('record')}
+                    className="sr-btn-ghost mt-2 text-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add record category
+                  </button>
+                </div>
+              </div>
+            </section>
+          ) : (
             <section className="rounded-md border border-[var(--sr-border)] bg-[var(--sr-surface-2)]/50 p-4">
               <h3 className="text-sm font-semibold text-[var(--sr-text)]">Competition types</h3>
               <p className="mt-1 text-xs leading-5 text-[var(--sr-text-muted)]">
