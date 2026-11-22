@@ -1,10 +1,10 @@
--- SplitRush SQL editor paste 2 of 7
--- Adds the database guards that keep runs on speedrun boards and record values on record boards, and blocks type changes once a board has submissions.
+-- SplitRush SQL editor paste 2 of 11
+-- 2 of 11 - prevents speedruns and records from mixing
 --
--- Paste this ENTIRE file into the Supabase SQL editor and run it once.
--- Safe to re-run: statements use IF NOT EXISTS / DROP ... IF EXISTS.
--- Requires the base SplitRush schema and the earlier numbered files
--- in this folder (see README.md for the order).
+-- HOW TO USE: copy this ENTIRE file and run it once in the SQL editor.
+-- Do not highlight part of it. Safe to re-run.
+-- Requires 01_competition_types.sql.
+-- If the last line of your paste is not "END OF FILE", the copy was cut off.
 
 -- Type guards: a run can never land on a record board and a record value can
 -- never land on a speedrun board.
@@ -14,7 +14,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM public.categories c
@@ -25,7 +25,7 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.guard_run_competition_type() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS runs_require_speedrun_category ON public.runs;
@@ -38,7 +38,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM public.categories c
@@ -50,7 +50,7 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.guard_record_submission_category() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS record_submissions_require_record_category ON public.record_submissions;
@@ -65,7 +65,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NEW.competition_type IS DISTINCT FROM OLD.competition_type THEN
     IF NEW.competition_type = 'record'
@@ -80,10 +80,12 @@ BEGIN
     END IF;
   END IF;
   RETURN NEW;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.guard_competition_type_change() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS categories_guard_competition_type ON public.categories;
 CREATE TRIGGER categories_guard_competition_type
   BEFORE UPDATE OF competition_type ON public.categories
   FOR EACH ROW EXECUTE FUNCTION public.guard_competition_type_change();
+
+-- END OF FILE: 02_competition_guards.sql

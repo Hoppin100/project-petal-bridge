@@ -1,10 +1,10 @@
--- SplitRush SQL editor paste 1 of 7
--- Adds competition_type and record columns, the record_submissions table, and its read/insert policies.
+-- SplitRush SQL editor paste 1 of 11
+-- 1 of 11 - competition columns, record submissions, and visibility rules
 --
--- Paste this ENTIRE file into the Supabase SQL editor and run it once.
--- Safe to re-run: statements use IF NOT EXISTS / DROP ... IF EXISTS.
--- Requires the base SplitRush schema and the earlier numbered files
--- in this folder (see README.md for the order).
+-- HOW TO USE: copy this ENTIRE file and run it once in the SQL editor.
+-- Do not highlight part of it. Safe to re-run.
+-- Requires the base SplitRush schema. Run first.
+-- If the last line of your paste is not "END OF FILE", the copy was cut off.
 
 -- Competition types: Speedruns and Records
 --
@@ -110,3 +110,5 @@ CREATE POLICY record_submissions_update_own ON public.record_submissions
   FOR UPDATE TO authenticated
   USING (auth.uid() = submitter_id)
   WITH CHECK (auth.uid() = submitter_id);
+
+-- END OF FILE: 01_competition_types.sql

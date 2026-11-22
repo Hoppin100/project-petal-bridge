@@ -1,10 +1,10 @@
--- SplitRush SQL editor paste 3 of 7
--- Adds verify_record_submission, reject_record_submission, delete_record_submission, and set_record_moderator_notes.
+-- SplitRush SQL editor paste 3 of 11
+-- 3 of 11 - owner verification and moderation functions for records
 --
--- Paste this ENTIRE file into the Supabase SQL editor and run it once.
--- Safe to re-run: statements use IF NOT EXISTS / DROP ... IF EXISTS.
--- Requires the base SplitRush schema and the earlier numbered files
--- in this folder (see README.md for the order).
+-- HOW TO USE: copy this ENTIRE file and run it once in the SQL editor.
+-- Do not highlight part of it. Safe to re-run.
+-- Requires 01_competition_types.sql.
+-- If the last line of your paste is not "END OF FILE", the copy was cut off.
 
 -- Moderation functions mirror verify_run / reject_run / delete_run.
 
@@ -16,7 +16,7 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NOT public.is_owner() THEN RAISE EXCEPTION 'Not authorized'; END IF;
   UPDATE public.record_submissions
@@ -27,7 +27,7 @@ BEGIN
       moderator_notes = COALESCE(NULLIF(btrim(p_notes), ''), moderator_notes)
   WHERE id = p_submission;
   IF NOT FOUND THEN RAISE EXCEPTION 'Record submission not found'; END IF;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.verify_record_submission(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.verify_record_submission(uuid, text) TO authenticated;
 
@@ -40,7 +40,7 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NOT public.is_owner() THEN RAISE EXCEPTION 'Not authorized'; END IF;
   IF p_reason IS NULL OR btrim(p_reason) = '' THEN
@@ -54,7 +54,7 @@ BEGIN
       moderator_notes = COALESCE(NULLIF(btrim(p_notes), ''), moderator_notes)
   WHERE id = p_submission;
   IF NOT FOUND THEN RAISE EXCEPTION 'Record submission not found'; END IF;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.reject_record_submission(uuid, text, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.reject_record_submission(uuid, text, text) TO authenticated;
 
@@ -63,12 +63,12 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NOT public.is_owner() THEN RAISE EXCEPTION 'Only owners can delete record submissions'; END IF;
   DELETE FROM public.record_submissions WHERE id = p_submission;
   IF NOT FOUND THEN RAISE EXCEPTION 'Record submission not found'; END IF;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.delete_record_submission(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.delete_record_submission(uuid) TO authenticated;
 
@@ -80,13 +80,15 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NOT public.is_owner() THEN RAISE EXCEPTION 'Not authorized'; END IF;
   UPDATE public.record_submissions
   SET moderator_notes = NULLIF(btrim(p_notes), '')
   WHERE id = p_submission;
   IF NOT FOUND THEN RAISE EXCEPTION 'Record submission not found'; END IF;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.set_record_moderator_notes(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.set_record_moderator_notes(uuid, text) TO authenticated;
+
+-- END OF FILE: 03_record_moderation.sql

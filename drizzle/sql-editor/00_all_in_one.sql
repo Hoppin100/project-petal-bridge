@@ -1,11 +1,10 @@
--- SplitRush SQL editor paste - everything in one file
+-- SplitRush SQL editor paste all in one
+-- everything (migrations 0009 + 0010)
 --
--- This is migrations 0009 + 0010 combined in the correct order.
--- Paste this ENTIRE file into the Supabase SQL editor and run it once.
--- Safe to re-run. Requires the base SplitRush schema.
---
--- If your SQL editor has trouble with a long script, use the numbered
--- files 01..07 in this folder instead.
+-- HOW TO USE: copy this ENTIRE file and run it once in the SQL editor.
+-- Do not highlight part of it. Safe to re-run.
+-- Use the numbered files instead if this paste is too long for your editor.
+-- If the last line of your paste is not "END OF FILE", the copy was cut off.
 
 -- Competition types: Speedruns and Records
 --
@@ -120,7 +119,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM public.categories c
@@ -131,7 +130,7 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.guard_run_competition_type() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS runs_require_speedrun_category ON public.runs;
@@ -144,7 +143,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM public.categories c
@@ -156,7 +155,7 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.guard_record_submission_category() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS record_submissions_require_record_category ON public.record_submissions;
@@ -171,7 +170,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NEW.competition_type IS DISTINCT FROM OLD.competition_type THEN
     IF NEW.competition_type = 'record'
@@ -186,7 +185,7 @@ BEGIN
     END IF;
   END IF;
   RETURN NEW;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.guard_competition_type_change() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS categories_guard_competition_type ON public.categories;
@@ -204,7 +203,7 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NOT public.is_owner() THEN RAISE EXCEPTION 'Not authorized'; END IF;
   UPDATE public.record_submissions
@@ -215,7 +214,7 @@ BEGIN
       moderator_notes = COALESCE(NULLIF(btrim(p_notes), ''), moderator_notes)
   WHERE id = p_submission;
   IF NOT FOUND THEN RAISE EXCEPTION 'Record submission not found'; END IF;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.verify_record_submission(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.verify_record_submission(uuid, text) TO authenticated;
 
@@ -228,7 +227,7 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NOT public.is_owner() THEN RAISE EXCEPTION 'Not authorized'; END IF;
   IF p_reason IS NULL OR btrim(p_reason) = '' THEN
@@ -242,7 +241,7 @@ BEGIN
       moderator_notes = COALESCE(NULLIF(btrim(p_notes), ''), moderator_notes)
   WHERE id = p_submission;
   IF NOT FOUND THEN RAISE EXCEPTION 'Record submission not found'; END IF;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.reject_record_submission(uuid, text, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.reject_record_submission(uuid, text, text) TO authenticated;
 
@@ -251,12 +250,12 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NOT public.is_owner() THEN RAISE EXCEPTION 'Only owners can delete record submissions'; END IF;
   DELETE FROM public.record_submissions WHERE id = p_submission;
   IF NOT FOUND THEN RAISE EXCEPTION 'Record submission not found'; END IF;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.delete_record_submission(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.delete_record_submission(uuid) TO authenticated;
 
@@ -268,14 +267,14 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NOT public.is_owner() THEN RAISE EXCEPTION 'Not authorized'; END IF;
   UPDATE public.record_submissions
   SET moderator_notes = NULLIF(btrim(p_notes), '')
   WHERE id = p_submission;
   IF NOT FOUND THEN RAISE EXCEPTION 'Record submission not found'; END IF;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.set_record_moderator_notes(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.set_record_moderator_notes(uuid, text) TO authenticated;
 
@@ -341,7 +340,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF TG_OP = 'INSERT' THEN
     UPDATE public.guides SET helpful_count = helpful_count + 1 WHERE id = NEW.guide_id;
@@ -349,7 +348,7 @@ BEGIN
   END IF;
   UPDATE public.guides SET helpful_count = GREATEST(helpful_count - 1, 0) WHERE id = OLD.guide_id;
   RETURN OLD;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.sync_guide_helpful_count() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS guide_votes_count ON public.guide_votes;
@@ -361,14 +360,14 @@ CREATE OR REPLACE FUNCTION public.touch_guide()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   NEW.updated_at := now();
   IF NEW.status = 'published' AND NEW.published_at IS NULL THEN
     NEW.published_at := now();
   END IF;
   RETURN NEW;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.touch_guide() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS guides_touch ON public.guides;
@@ -558,7 +557,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF TG_OP = 'INSERT' THEN
     UPDATE public.forum_threads SET score = score + NEW.value WHERE id = NEW.thread_id;
@@ -566,7 +565,7 @@ BEGIN
   END IF;
   UPDATE public.forum_threads SET score = score - OLD.value WHERE id = OLD.thread_id;
   RETURN OLD;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.sync_forum_thread_score() FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.sync_forum_post_score()
@@ -574,7 +573,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF TG_OP = 'INSERT' THEN
     UPDATE public.forum_posts SET score = score + NEW.value WHERE id = NEW.post_id;
@@ -582,7 +581,7 @@ BEGIN
   END IF;
   UPDATE public.forum_posts SET score = score - OLD.value WHERE id = OLD.post_id;
   RETURN OLD;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.sync_forum_post_score() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS forum_thread_votes_insert ON public.forum_votes;
@@ -613,7 +612,7 @@ CREATE OR REPLACE FUNCTION public.guard_forum_thread_update()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF NOT public.is_game_staff() THEN
     IF NEW.is_pinned IS DISTINCT FROM OLD.is_pinned
@@ -640,7 +639,7 @@ BEGIN
 
   NEW.updated_at := now();
   RETURN NEW;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.guard_forum_thread_update() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS forum_threads_guard_update ON public.forum_threads;
@@ -652,7 +651,7 @@ CREATE OR REPLACE FUNCTION public.guard_forum_post_insert()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM public.forum_threads t
@@ -668,7 +667,7 @@ BEGIN
   END IF;
   NEW.updated_at := now();
   RETURN NEW;
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.guard_forum_post_insert() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS forum_posts_guard_insert ON public.forum_posts;
@@ -804,14 +803,14 @@ CREATE OR REPLACE FUNCTION public.vote_forum_thread(p_thread uuid, p_value small
 RETURNS void
 LANGUAGE plpgsql
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Sign in to vote'; END IF;
   DELETE FROM public.forum_votes WHERE user_id = auth.uid() AND thread_id = p_thread;
   IF p_value NOT IN (-1, 1) THEN RETURN; END IF;
   INSERT INTO public.forum_votes (user_id, thread_id, value)
   VALUES (auth.uid(), p_thread, p_value);
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.vote_forum_thread(uuid, smallint) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.vote_forum_thread(uuid, smallint) TO authenticated;
 
@@ -819,13 +818,15 @@ CREATE OR REPLACE FUNCTION public.vote_forum_post(p_post uuid, p_value smallint)
 RETURNS void
 LANGUAGE plpgsql
 SET search_path = public
-AS $$
+AS $sr$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Sign in to vote'; END IF;
   DELETE FROM public.forum_votes WHERE user_id = auth.uid() AND post_id = p_post;
   IF p_value NOT IN (-1, 1) THEN RETURN; END IF;
   INSERT INTO public.forum_votes (user_id, post_id, value)
   VALUES (auth.uid(), p_post, p_value);
-END $$;
+END $sr$;
 REVOKE EXECUTE ON FUNCTION public.vote_forum_post(uuid, smallint) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.vote_forum_post(uuid, smallint) TO authenticated;
+
+-- END OF FILE: 00_all_in_one.sql

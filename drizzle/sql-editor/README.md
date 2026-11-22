@@ -1,53 +1,65 @@
 # SplitRush SQL editor pastes
 
-These files are convenience copies of the canonical migrations for pasting into
-the Supabase SQL editor (or any other SQL console). They contain the same SQL as
-`drizzle/migrations/0009_competition_types.sql` and
-`drizzle/migrations/0010_guides_and_forums.sql`, split into short files.
+Convenience copies of `drizzle/migrations/0009_competition_types.sql` and
+`drizzle/migrations/0010_guides_and_forums.sql`, split into short files for the
+Supabase SQL editor. The files in `drizzle/migrations/` remain the source of
+truth.
 
-The files in `drizzle/migrations/` are still the source of truth. These copies
-exist because a few small pastes are easier to retry than one long script.
+Each file is safe to re-run (`IF NOT EXISTS`, `CREATE OR REPLACE`,
+`DROP ... IF EXISTS`) and ends with an `-- END OF FILE:` marker. If that marker
+is not the last line in the editor, the paste was cut off.
 
-## Two ways to apply them
+> **About `$sr$`:** these files use `$sr$ ... $sr$` as the function-body
+> delimiter instead of `$$ ... $$`. Both are valid PostgreSQL, but some editors
+> and shells treat `$$` specially. `$sr$` avoids that.
 
-**Option A - one paste**
+## Run them in this order
 
-Open `00_all_in_one.sql`, copy the whole file, paste it into the SQL editor, and
-run it once. This is migrations 0009 and 0010 in the correct order.
-
-**Option B - seven small pastes**
-
-Run these in filename order. Each file is self-contained and safe to re-run.
-
-| # | File | What it does | Needs |
+| # | File | Adds | Needs first |
 |---|---|---|---|
 | 1 | `01_competition_types.sql` | Competition type + record columns, `record_submissions`, read/insert policies | Base schema |
-| 2 | `02_competition_guards.sql` | Guards that stop speedruns and records from mixing; blocks type changes after submissions exist | 1 |
+| 2 | `02_competition_guards.sql` | Guards that stop speedruns and records from mixing | 1 |
 | 3 | `03_record_moderation.sql` | Owner verify/reject/delete/notes functions for records | 1 |
-| 4 | `04_category_names.sql` | Allows identical category names across competition types | 1 |
-| 5 | `05_guides.sql` | Guides, sections, helpful votes, and permissions | Base schema |
-| 6 | `06_forums.sql` | Discussions, replies, votes, reports, pin/lock guards, and permissions | Base schema |
-| 7 | `07_forum_votes.sql` | `vote_forum_thread` / `vote_forum_post` helpers | 6 |
+| 4 | `04_category_names.sql` | Identical category names across competition types | 1 |
+| 5 | `05_guide_tables.sql` | Guides, sections, helpful votes, grants, RLS | Base schema |
+| 6 | `06_guide_policies.sql` | Guide read/write policies | 5 |
+| 7 | `07_forum_tables.sql` | Discussions, replies, votes, reports, grants, RLS | Base schema |
+| 8 | `08_forum_score_triggers.sql` | Vote score triggers | 7 |
+| 9 | `09_forum_guards.sql` | Pin/lock, reply, and accepted-answer guards | 7 |
+| 10 | `10_forum_policies.sql` | Forum read/write and report policies | 7 |
+| 11 | `11_forum_votes.sql` | `vote_forum_thread` / `vote_forum_post` helpers | 7 |
 
-## Copying tips
+Only need forums? Run 7, 8, 9, 10, 11. Only need guides? Run 5 and 6.
+Only need records? Run 1, 2, 3, 4.
 
-- Open the file and use **Ctrl+A**, **Ctrl+C** (or **Raw** in GitHub, then copy
-  the whole page). Do not hand-select lines; a missing semicolon is the usual
-  cause of a failed paste.
-- Each file uses `IF NOT EXISTS`, `CREATE OR REPLACE`, and `DROP ... IF EXISTS`,
-  so re-running a file after a partial failure is safe.
-- If the editor reports that something already exists, that part was applied
-  already. Continue with the next numbered file.
-- `02_competition_guards.sql` requires `01_competition_types.sql` first because
-  it references `categories.competition_type` and `record_submissions`.
-- `07_forum_votes.sql` requires `06_forums.sql` first because it references
-  `forum_votes`.
-- These files only add the competition, guide, and forum features. They do not
-  delete or rewrite existing runs, categories, profiles, or games.
+`00_all_in_one.sql` contains everything in one file if your editor handles a
+longer paste.
 
-## After the SQL
+## Troubleshooting
 
-1. Check the owner account can see the new tabs, guides, and forums.
-2. Publish in Lovable.
-3. Set `OWNER_ONLY_PREVIEW = false` in `src/lib/preview.ts` and push, so
-   everyone sees the new layout.
+**`unterminated dollar-quoted string at or near "$sr$ ..."`**
+
+The editor received only part of a function. This happens when a paste is cut
+off, or when only some text was selected and "Run selection" was used.
+
+1. Open the file again and copy with **Ctrl+A** then **Ctrl+C**. In GitHub use
+   **Raw** first.
+2. Confirm the last line in the editor is `-- END OF FILE: <filename>`.
+3. Clear any text selection before clicking Run, or use the editor shortcut for
+   running the whole script.
+4. Prefer the smaller numbered file over `00_all_in_one.sql` if this keeps
+   happening.
+
+**`relation "..." does not exist`**
+
+A dependency has not run yet. Check the "Needs first" column, for example run
+`07_forum_tables.sql` before `08_forum_score_triggers.sql`.
+
+**`must be owner of table ...`**
+
+Run the SQL as the database owner/admin role, not a limited application role.
+
+**An earlier file failed halfway**
+
+Re-run that same file. Every statement checks first, so already-applied parts
+are skipped safely, then continue with the next number.
